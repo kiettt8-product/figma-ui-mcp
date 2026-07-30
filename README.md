@@ -13,6 +13,8 @@ thuộc dự án gốc. Giao diện plugin và tài liệu cài đặt trong rep
 
 License: MIT. Xem chi tiết tại [LICENSE](LICENSE).
 
+![Giao diện mặc định của Figma UI MCP Bridge](assets/plugin-ui-light.png)
+
 ---
 
 ## 1. Thông tin triển khai
@@ -290,7 +292,12 @@ Figma UI MCP Bridge · Kiettt8
 3. Chạy `Figma UI MCP Bridge · Kiettt8`.
 4. Giữ cửa sổ plugin mở trong lúc sử dụng MCP.
 
-Khi server hoạt động, trạng thái plugin chuyển từ `Connecting` sang `Connected`.
+Plugin mở trực tiếp bằng giao diện sáng mới trong hình ở đầu README. Giao
+diện tối của dự án gốc không còn là giao diện mặc định trong repository này.
+Khi bridge hoạt động, trạng thái chuyển từ `Connecting` sang `Connected`.
+
+Không cần chạy thêm `npx figma-ui-mcp` trong Terminal nếu MCP client đã được
+cấu hình theo mục 6. MCP client sẽ tự khởi chạy `server/index.js`.
 
 ---
 
@@ -460,15 +467,21 @@ Trong sử dụng bình thường, MCP client sẽ tự khởi chạy server.
 
 ### 13.1. Vẫn thấy giao diện cũ
 
-Nguyên nhân thường gặp là Figma đang dùng một manifest khác.
+Nguyên nhân thường gặp là Figma đang dùng một manifest khác, một bản plugin
+đã giải nén từ `plugin.zip` cũ, hoặc package npm của dự án gốc.
 
 Cách xử lý:
 
-1. Mở `Manage plugins in development`.
-2. Xóa đăng ký Figma UI MCP Bridge cũ.
-3. Import lại `plugin/manifest.json` từ repository này.
-4. Đóng và chạy lại plugin.
-5. Nếu vẫn chưa cập nhật, thoát hoàn toàn Figma Desktop rồi mở lại.
+1. Trong repository, chạy `git pull origin main`.
+2. Mở `Manage plugins in development`.
+3. Xóa tất cả đăng ký Figma UI MCP Bridge cũ.
+4. Import đúng `plugin/manifest.json` từ repository vừa pull.
+5. Đóng popup plugin và chạy lại plugin.
+6. Nếu vẫn chưa cập nhật, thoát hoàn toàn Figma Desktop rồi mở lại.
+
+File nguồn chuẩn của giao diện là `plugin/ui.html`. File `plugin.zip` trong
+repository cũng được đóng gói từ cùng thư mục `plugin/`, nhưng development
+plugin nên luôn import trực tiếp `plugin/manifest.json` để nhận thay đổi mới.
 
 ### 13.2. MCP client đang chạy bản npm thay vì source local
 
@@ -537,10 +550,11 @@ Một cấu hình hoàn chỉnh cần đạt các điều kiện sau:
 2. MCP client dùng đường dẫn local đến `server/index.js`.
 3. Figma Desktop đăng ký đúng `plugin/manifest.json`.
 4. Plugin hiển thị tên `Figma UI MCP Bridge · Kiettt8`.
-5. `figma_status` trả về `pluginConnected: true`.
-6. `figma_read` đọc được selection hoặc page.
-7. `figma_write` tạo được một node thử nghiệm.
-8. Screenshot trả về đúng frame vừa thao tác.
+5. Plugin hiển thị giao diện sáng mới, không phải giao diện tối cũ.
+6. `figma_status` trả về `pluginConnected: true`.
+7. `figma_read` đọc được selection hoặc page.
+8. `figma_write` tạo được một node thử nghiệm.
+9. Screenshot trả về đúng frame vừa thao tác.
 
 ---
 
