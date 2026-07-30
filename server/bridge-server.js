@@ -5,7 +5,7 @@ import http from "node:http";
 export const CONFIG = {
   PORT: parseInt(process.env.FIGMA_MCP_PORT || "38451", 10),
   PORT_RANGE: 10,
-  HOST: null,
+  HOST: process.env.FIGMA_MCP_HOST || "127.0.0.1",
   OP_TIMEOUT_MS: 60_000,
   MAX_BODY_BYTES: 5_000_000,
   MAX_QUEUE: 50,
@@ -255,7 +255,7 @@ export class BridgeServer {
     if (path === "/" && req.method === "GET") {
       res.writeHead(200);
       res.end(JSON.stringify({
-        server: "figma-ui-mcp", version: "2.4.5", port: this.#actualPort,
+        server: "figma-ui-mcp", version: "2.5.27", port: this.#actualPort,
         pluginConnected: this.isPluginConnected(),
         sessions: this.getSessions(),
         queueLength: this.queueLength,
@@ -394,13 +394,14 @@ export class BridgeServer {
     } catch(e) { /* ignore */ }
   }
 
-  start() {
+  start({ strictPort = false } = {}) {
     var self = this;
-    return new Promise(async function(resolve) {
+    return new Promise(async function(resolve, reject) {
       await self.#killStaleBridges();
 
       var tryPort = function(port, attempt) {
-        if (attempt >= CONFIG.PORT_RANGE) {
+        var maxAttempts = strictPort ? 1 : CONFIG.PORT_RANGE;
+        if (attempt >= maxAttempts) {
           process.stderr.write("[figma-ui-mcp] All ports " + CONFIG.PORT + "-" + (CONFIG.PORT + CONFIG.PORT_RANGE - 1) + " in use.\n");
           resolve(self);
           return;
@@ -408,11 +409,16 @@ export class BridgeServer {
         self.#server = http.createServer(function(req, res) { self.#route(req, res); });
         self.#server.once("error", function(err) {
           if (err.code === "EADDRINUSE") {
+            if (strictPort) {
+              reject(err);
+              return;
+            }
             process.stderr.write("[figma-ui-mcp] Port " + port + " in use — trying " + (port + 1) + "...\n");
             tryPort(port + 1, attempt + 1);
           } else {
             process.stderr.write("[figma-ui-mcp bridge] " + err.message + "\n");
-            resolve(self);
+            if (strictPort) reject(err);
+            else resolve(self);
           }
         });
         self.#server.once("listening", function() {

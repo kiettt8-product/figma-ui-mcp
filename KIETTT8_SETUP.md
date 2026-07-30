@@ -37,12 +37,26 @@ npm run setup
 
 The wizard supports Codex, Claude Code, Claude Desktop, Cursor, VS Code, and
 Windsurf. It uses absolute paths, preserves unrelated MCP entries, and creates
-a timestamped backup before changing an existing config.
+a timestamped backup before changing an existing config. By default it also
+installs an always-on local bridge that starts at login. After setup, opening
+the Figma plugin does not require a Terminal window or `npx figma-ui-mcp`.
 
 For unattended setup:
 
 ```bash
 npm run setup -- --client codex,cursor --yes
+```
+
+Install or repair only the background bridge:
+
+```bash
+npm run setup:background
+```
+
+Skip the login service only when required by company policy:
+
+```bash
+npm run setup -- --client all --yes --no-background
 ```
 
 Preview changes without writing files:
@@ -106,7 +120,9 @@ Replace `/ABSOLUTE/PATH/TO` with the real clone location, then fully quit and re
 6. Open a Figma design file.
 7. Run **Plugins → Development → Figma UI MCP Bridge · Kiettt8**.
 
-The plugin should show the custom light UI and move from **Connecting** to **Connected** when the MCP server is running.
+The plugin should show the custom light UI and move from **Connecting** to
+**Connected** immediately. The setup wizard has already started the local
+bridge in the background; no MCP client or Terminal command must be running.
 
 ## 5. Verify the connection
 
@@ -122,7 +138,13 @@ A working connection reports:
 - Bridge port `38451`, unless a different port was selected.
 - Information about the open Figma file.
 
-If the plugin remains disconnected, confirm the bridge process:
+If the plugin remains disconnected, confirm the bridge health:
+
+```bash
+curl http://127.0.0.1:38451/health
+```
+
+Then inspect the process:
 
 ```bash
 lsof -nP -iTCP:38451 -sTCP:LISTEN
@@ -194,9 +216,9 @@ server/
 
 After changing server code:
 
-1. Fully quit the MCP client.
-2. Confirm that its previous server process has stopped.
-3. Reopen the client so it launches the updated local source.
+1. Run `npm run setup:background` to reload the daemon.
+2. Fully quit the MCP client.
+3. Reopen the client so it launches the updated local adapter.
 4. Rerun the Figma plugin.
 
 ## 9. Troubleshooting
@@ -232,7 +254,30 @@ Inspect the process before stopping anything:
 lsof -nP -iTCP:38451 -sTCP:LISTEN
 ```
 
-Close the MCP client that owns the old process, or select another bridge port from the plugin UI.
+If the owner is the installed Figma UI MCP background service, this is the
+expected process and it should remain running.
+
+### The plugin says to run npx
+
+Install or repair the background bridge:
+
+```bash
+npm run setup:background
+curl http://127.0.0.1:38451/health
+```
+
+On macOS, inspect its status and log:
+
+```bash
+launchctl print gui/$(id -u)/io.github.kiettt8-product.figma-ui-mcp-bridge
+tail -50 ~/Library/Logs/FigmaUIMCP/bridge.error.log
+```
+
+On Linux:
+
+```bash
+systemctl --user status figma-ui-mcp-bridge.service
+```
 
 ### Figma is connected but commands go to the wrong file
 
@@ -243,7 +288,11 @@ Close unused plugin instances or pass the correct `sessionId` when multiple Figm
 - Do not expose port `38451` directly to the Internet.
 - The bridge endpoints do not provide production-grade authentication.
 - Use this edition as a local development bridge.
-- Apply firewall or loopback binding controls before using it on an untrusted network.
+- The bridge binds to `127.0.0.1` by default.
+- Do not change the bind host to a public interface without authentication and
+  firewall controls.
+- The login service starts with a minimal environment and does not forward
+  shell credentials to the bridge.
 - Review every AI-generated write operation before using the plugin on production design files.
 
 ## 11. Review updates from the original project

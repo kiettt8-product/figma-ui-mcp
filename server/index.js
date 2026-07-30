@@ -57,11 +57,15 @@ const httpProxy = {
         let data = "";
         res.on("data", chunk => data += chunk);
         res.on("end", () => {
-          try { resolve(JSON.parse(data)); } catch { resolve({ pluginConnected: false }); }
+          try { resolve({ ...JSON.parse(data), reachable: true }); }
+          catch { resolve({ reachable: false, pluginConnected: false }); }
         });
       });
-      req.on("error", () => resolve({ pluginConnected: false }));
-      req.setTimeout(2000, () => { req.destroy(); resolve({ pluginConnected: false }); });
+      req.on("error", () => resolve({ reachable: false, pluginConnected: false }));
+      req.setTimeout(2000, () => {
+        req.destroy();
+        resolve({ reachable: false, pluginConnected: false });
+      });
       req.end();
     });
   },
@@ -72,10 +76,10 @@ const httpProxy = {
 // This prevents fallback sessions from starting unnecessary local bridges that
 // #killStaleBridges() in later sessions might misclassify and kill.
 const existingHealth = await httpProxy.checkHealth();
-if (existingHealth.pluginConnected) {
+if (existingHealth.reachable) {
   useHttpProxy = true;
   bridge = httpProxy;
-  process.stderr.write("[figma-ui-mcp] Existing bridge detected with plugin connected, using HTTP proxy\n");
+  process.stderr.write("[figma-ui-mcp] Existing background bridge detected, using HTTP proxy\n");
 } else {
   // No healthy primary bridge — try to start our own
   try {
@@ -91,7 +95,7 @@ if (existingHealth.pluginConnected) {
   // If it ended up on a fallback port but primary port has a live bridge, switch to proxy.
   if (!useHttpProxy && bridge.port !== CONFIG.PORT) {
     const primaryHealth = await httpProxy.checkHealth();
-    if (primaryHealth.pluginConnected !== undefined) {
+    if (primaryHealth.reachable) {
       // A figma-ui-mcp bridge already owns the primary port — we are a redundant session.
       // Stop our local bridge and use HTTP proxy to avoid being killed as "stale".
       bridge.stop();
@@ -103,7 +107,7 @@ if (existingHealth.pluginConnected) {
 }
 
 const server = new Server(
-  { name: "figma-ui-mcp", version: "2.5.13" },
+  { name: "figma-ui-mcp", version: "2.5.27" },
   { capabilities: { tools: {} } }
 );
 

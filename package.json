@@ -1,6 +1,6 @@
 {
   "name": "figma-ui-mcp",
-  "version": "2.5.26",
+  "version": "2.5.27",
   "description": "Kiettt8 custom Figma MCP bridge with a one-command setup wizard for Codex, Claude, Cursor, VS Code, and Windsurf.",
   "mcpName": "io.github.kiettt8-product/figma-ui-mcp",
   "type": "module",
@@ -10,10 +10,12 @@
   "files": [
     "server/cli.js",
     "server/index.js",
+    "server/bridge-daemon.js",
     "server/bridge-server.js",
     "server/code-executor.js",
     "server/tool-definitions.js",
     "server/api-docs.js",
+    "scripts/background-service.js",
     "scripts/setup-mcp.js",
     "plugin/code.js",
     "plugin/manifest.json",
@@ -23,8 +25,9 @@
   ],
   "scripts": {
     "setup": "node scripts/setup-mcp.js",
+    "setup:background": "node scripts/background-service.js",
     "setup:dry-run": "node scripts/setup-mcp.js --dry-run",
-    "test:setup": "node scripts/test-setup-mcp.mjs",
+    "test:setup": "node scripts/test-setup-mcp.mjs && node scripts/test-background-service.mjs",
     "start": "node server/index.js",
     "build:plugin": "node scripts/build-plugin.js",
     "dev": "node --watch scripts/build-plugin.js"

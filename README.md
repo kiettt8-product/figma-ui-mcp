@@ -22,7 +22,7 @@ License: MIT. Xem chi tiết tại [LICENSE](LICENSE).
 | Hạng mục | Giá trị |
 | --- | --- |
 | Repository | `https://github.com/kiettt8-product/figma-ui-mcp` |
-| Phiên bản nền tảng | `2.5.26` |
+| Phiên bản nền tảng | `2.5.27` |
 | Node.js | Từ phiên bản 18 |
 | Figma | Figma Desktop |
 | Bridge mặc định | Port `38451` |
@@ -47,9 +47,13 @@ MCP client
     |
     | MCP qua stdio
     v
-Node.js MCP server
+Node.js MCP adapter
     |
-    | HTTP long polling trên port 38451
+    | HTTP local
+    v
+Bridge daemon chạy ngầm khi đăng nhập
+    |
+    | HTTP long polling tại 127.0.0.1:38451
     v
 Figma development plugin
     |
@@ -58,9 +62,17 @@ Figma development plugin
 Figma document
 ```
 
-MCP client tự khởi chạy `server/index.js`. MCP server tiếp nhận lệnh từ AI
-và chuyển lệnh đến plugin đang mở trong Figma Desktop. Plugin thực thi lệnh
-trên Figma document rồi trả kết quả về MCP client.
+Setup wizard cài một bridge daemon chạy ngầm cùng phiên đăng nhập của người
+dùng. Vì vậy, vừa mở development plugin trong Figma thì plugin có thể kết
+nối ngay; không cần mở Terminal và không cần chạy `npx figma-ui-mcp`.
+
+Mỗi MCP client vẫn tự khởi chạy `server/index.js` để giao tiếp qua stdio.
+Adapter này phát hiện daemon có sẵn và chuyển lệnh đến daemon qua HTTP local.
+Plugin thực thi lệnh trên Figma document rồi trả kết quả về MCP client.
+
+Nếu người dùng chủ động tắt cài đặt background, `server/index.js` vẫn có thể
+tự mở bridge khi MCP client khởi động. Chế độ này chỉ kết nối được sau khi
+MCP client đã chạy.
 
 Figma bản web không phù hợp với cấu hình này vì bridge chạy trên máy local.
 Hãy sử dụng Figma Desktop.
@@ -126,7 +138,8 @@ Wizard sẽ:
 - Dùng đường dẫn tuyệt đối tới Node.js và `server/index.js`.
 - Chỉ thay entry `figma-ui-mcp`, giữ nguyên các MCP server khác.
 - Tạo file backup trước khi cập nhật một cấu hình đã tồn tại.
-- Không khởi chạy cửa sổ Terminal khi sử dụng hằng ngày.
+- Cài bridge chạy ngầm khi đăng nhập máy, không hiện cửa sổ Terminal.
+- Khởi chạy bridge ngay sau khi setup để plugin có thể kết nối lập tức.
 
 Nhấn Enter để cấu hình tất cả client được phát hiện, hoặc nhập danh sách
 client cần cấu hình.
@@ -137,6 +150,19 @@ Có thể chạy không tương tác:
 npm run setup -- --client codex,cursor --yes
 npm run setup -- --client claude --yes
 npm run setup -- --client all --yes
+```
+
+Mặc định wizard sẽ cài background bridge. Nếu policy máy không cho phép tạo
+login service, có thể bỏ qua riêng bước này:
+
+```bash
+npm run setup -- --client all --yes --no-background
+```
+
+Để cài lại hoặc sửa riêng background bridge:
+
+```bash
+npm run setup:background
 ```
 
 Xem trước thay đổi mà không ghi file:
@@ -270,13 +296,12 @@ Khởi động lại VS Code sau khi lưu cấu hình.
 Sau khi MCP client khởi động lại:
 
 1. Client nhận diện server `figma-ui-mcp`.
-2. Client tự chạy tiến trình Node.js trong background.
-3. Bridge mở port `38451` hoặc một port dự phòng trong dải tiếp theo.
+2. Login service giữ bridge tại `127.0.0.1:38451`.
+3. Client tự chạy MCP adapter và dùng bridge đã có.
 4. `figma_status` có thể được gọi, dù plugin có thể chưa kết nối ở bước này.
 
-Không chạy thêm `npm start` hoặc `npx figma-ui-mcp` trong Terminal. Nếu
-Terminal vẫn đang chạy một bản MCP cũ, nhấn `Ctrl+C`, đóng Terminal rồi
-khởi động lại MCP client.
+Không chạy thêm `npm start` hoặc `npx figma-ui-mcp` trong Terminal. Nếu còn
+một Terminal đang chạy bản MCP cũ, nhấn `Ctrl+C` và đóng cửa sổ đó.
 
 ---
 
@@ -326,8 +351,10 @@ Plugin mở trực tiếp bằng giao diện sáng mới trong hình ở đầu 
 diện tối của dự án gốc không còn là giao diện mặc định trong repository này.
 Khi bridge hoạt động, trạng thái chuyển từ `Connecting` sang `Connected`.
 
-Không cần chạy thêm `npx figma-ui-mcp` trong Terminal nếu MCP client đã được
-cấu hình theo mục 6. MCP client sẽ tự khởi chạy `server/index.js`.
+Không cần mở Codex, Claude, Cursor hoặc Terminal trước. Background bridge đã
+được setup wizard khởi chạy và sẽ tự chạy lại khi đăng nhập máy. Phần duy
+nhất người dùng vẫn phải mở thủ công là development plugin trong Figma vì
+Figma không cho plugin tự khởi chạy tiến trình hệ điều hành.
 
 ---
 
@@ -469,7 +496,8 @@ Các file chính:
 
 | File | Trách nhiệm |
 | --- | --- |
-| `server/index.js` | MCP server và stdio transport |
+| `server/index.js` | MCP adapter, stdio transport và HTTP proxy |
+| `server/bridge-daemon.js` | Tiến trình bridge chạy ngầm |
 | `server/bridge-server.js` | HTTP bridge và quản lý session |
 | `server/tool-definitions.js` | Định nghĩa MCP tools |
 | `server/code-executor.js` | Thực thi thao tác đã được kiểm soát |
@@ -477,9 +505,9 @@ Các file chính:
 
 Sau khi sửa server:
 
-1. Thoát hoàn toàn MCP client.
-2. Kiểm tra tiến trình Node.js cũ đã dừng.
-3. Mở lại MCP client để server mới được khởi chạy.
+1. Chạy `npm run setup:background` để nạp lại daemon mới.
+2. Thoát hoàn toàn MCP client.
+3. Mở lại MCP client để adapter mới được khởi chạy.
 4. Chạy lại Figma plugin.
 5. Gọi `figma_status`.
 
@@ -489,7 +517,7 @@ Chạy server thủ công chỉ nên dùng để kiểm tra:
 npm start
 ```
 
-Trong sử dụng bình thường, MCP client sẽ tự khởi chạy server.
+Trong sử dụng bình thường, không cần chạy lệnh này.
 
 ---
 
@@ -549,20 +577,53 @@ Trên Windows:
 netstat -ano | findstr :38451
 ```
 
-Xác định tiến trình trước khi dừng. Thông thường chỉ cần thoát MCP client cũ
-rồi mở lại.
+Xác định tiến trình trước khi dừng. Nếu tiến trình là background bridge của
+repository này thì không dừng nó; đây là tiến trình đúng cần giữ port.
 
-### 13.4. Plugin ở trạng thái Connecting
+### 13.4. Background bridge không chạy
+
+Cài hoặc sửa lại service:
+
+```bash
+npm run setup:background
+```
+
+Kiểm tra health trên mọi hệ điều hành:
+
+```bash
+curl http://127.0.0.1:38451/health
+```
+
+Trên macOS:
+
+```bash
+launchctl print gui/$(id -u)/io.github.kiettt8-product.figma-ui-mcp-bridge
+tail -50 ~/Library/Logs/FigmaUIMCP/bridge.error.log
+```
+
+Trên Linux:
+
+```bash
+systemctl --user status figma-ui-mcp-bridge.service
+```
+
+Trên Windows, kiểm tra file sau có tồn tại:
+
+```text
+%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Figma UI MCP Bridge.vbs
+```
+
+### 13.5. Plugin ở trạng thái Connecting
 
 Kiểm tra:
 
-1. MCP client đã nhận server hay chưa.
-2. `server/index.js` có chạy hay không.
-3. Port trong plugin có trùng port server hay không.
-4. Firewall có chặn kết nối local hay không.
+1. `curl http://127.0.0.1:38451/health` có trả JSON hay không.
+2. Background service đã được cài bằng `npm run setup:background` hay chưa.
+3. Port trong plugin có trùng `38451` hay không.
+4. Firewall có chặn kết nối loopback hay không.
 5. Figma đang chạy đúng development plugin hay không.
 
-### 13.5. Lệnh chạy vào nhầm Figma file
+### 13.6. Lệnh chạy vào nhầm Figma file
 
 Bridge hỗ trợ nhiều session. Nếu đang mở plugin trong nhiều Figma file:
 
@@ -577,14 +638,15 @@ Bridge hỗ trợ nhiều session. Nếu đang mở plugin trong nhiều Figma f
 Một cấu hình hoàn chỉnh cần đạt các điều kiện sau:
 
 1. `npm install` chạy thành công.
-2. MCP client dùng đường dẫn local đến `server/index.js`.
-3. Figma Desktop đăng ký đúng `plugin/manifest.json`.
-4. Plugin hiển thị tên `Figma UI MCP Bridge · Kiettt8`.
-5. Plugin hiển thị giao diện sáng mới, không phải giao diện tối cũ.
-6. `figma_status` trả về `pluginConnected: true`.
-7. `figma_read` đọc được selection hoặc page.
-8. `figma_write` tạo được một node thử nghiệm.
-9. Screenshot trả về đúng frame vừa thao tác.
+2. `npm run setup:background` chạy thành công.
+3. Health endpoint tại `127.0.0.1:38451` trả JSON.
+4. MCP client dùng đường dẫn local đến `server/index.js`.
+5. Figma Desktop đăng ký đúng `plugin/manifest.json`.
+6. Plugin hiển thị tên `Figma UI MCP Bridge · Kiettt8`.
+7. Plugin hiển thị giao diện sáng mới, không phải giao diện tối cũ.
+8. Plugin kết nối mà không cần mở Terminal hoặc MCP client.
+9. `figma_status` trả về `pluginConnected: true`.
+10. `figma_read` và `figma_write` hoạt động đúng Figma file.
 
 ---
 
@@ -600,13 +662,16 @@ figma-ui-mcp/
 |   `-- plugin/
 |-- server/
 |   |-- index.js
+|   |-- bridge-daemon.js
 |   |-- bridge-server.js
 |   |-- tool-definitions.js
 |   |-- code-executor.js
 |   `-- api-docs.js
 |-- scripts/
 |   |-- build-plugin.js
+|   |-- background-service.js
 |   |-- setup-mcp.js
+|   |-- test-background-service.mjs
 |   `-- test-setup-mcp.mjs
 |-- package.json
 |-- CHANGELOG.md
@@ -620,14 +685,17 @@ figma-ui-mcp/
 
 Bridge này được thiết kế cho local development.
 
-1. Không expose trực tiếp port `38451` lên Internet.
+1. Bridge mặc định chỉ bind vào `127.0.0.1`, không expose port `38451` ra LAN.
 2. Bridge không có cơ chế authentication phù hợp cho môi trường production.
-3. Không chạy trên mạng không tin cậy nếu chưa giới hạn network binding và firewall.
+3. Không đổi `FIGMA_MCP_HOST` thành địa chỉ public nếu chưa có authentication
+   và firewall phù hợp.
 4. Kiểm tra các thao tác do AI tạo trước khi áp dụng lên design file quan trọng.
 5. Không lưu credential hoặc dữ liệu nhạy cảm trong prompt, source code hoặc
    Figma plugin.
 6. Setup wizard không in nội dung config hoặc credential ra màn hình. Hãy
    kiểm tra file backup trước khi xóa.
+7. Login service khởi chạy daemon với environment tối thiểu, không chuyển
+   credential của shell sang bridge.
 
 ---
 

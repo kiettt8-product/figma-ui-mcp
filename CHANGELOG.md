@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.5.27] — 2026-07-30
+
+### Added — terminal-free local bridge
+
+- Added an always-on local bridge daemon at `server/bridge-daemon.js`.
+- `npm run setup` now offers to install the bridge as a macOS LaunchAgent,
+  Linux systemd user service, or hidden Windows Startup task.
+- Added `npm run setup:background` to install, repair, or restart only the
+  background service.
+- The MCP stdio adapter now detects the daemon and forwards operations through
+  the existing bridge instead of opening a competing port.
+- The bridge binds to `127.0.0.1` by default, and generated login services use
+  a minimal environment.
+- Added cross-platform service-definition and dry-run tests.
+
+### Result
+
+After one-time setup, users can run the Figma development plugin without
+opening a Terminal or manually running `npx figma-ui-mcp`. The plugin reconnects
+to the login service at `127.0.0.1:38451`.
+
+---
+
 ## [2.5.26] — 2026-05-25
 
 ### Fixed — 10 bugs from field report (Clean Master Plus project)

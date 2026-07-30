@@ -17,6 +17,7 @@ import process from "node:process";
 import readline from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { applyEdits, modify, parse, printParseErrorCode } from "jsonc-parser";
+import { installBackgroundService } from "./background-service.js";
 
 export const SERVER_NAME = "figma-ui-mcp";
 
@@ -394,6 +395,7 @@ function parseArgs(argv) {
     clientValues: [],
     yes: false,
     dryRun: false,
+    background: null,
     help: false,
   };
 
@@ -401,6 +403,8 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === "--yes" || arg === "-y") result.yes = true;
     else if (arg === "--dry-run") result.dryRun = true;
+    else if (arg === "--background") result.background = true;
+    else if (arg === "--no-background") result.background = false;
     else if (arg === "--help" || arg === "-h") result.help = true;
     else if (arg === "--client" || arg === "-c") {
       const value = argv[++index];
@@ -451,6 +455,7 @@ Usage:
   npm run setup -- --client codex,cursor
   npm run setup -- --client all --yes
   npm run setup -- --client vscode --dry-run
+  npm run setup -- --client codex --background --yes
 
 Clients:
   codex, claude-code, claude-desktop, cursor, vscode, windsurf
@@ -459,6 +464,8 @@ Options:
   -c, --client <ids>  Configure one or more comma-separated clients
   -y, --yes           Replace an existing figma-ui-mcp entry without prompting
       --dry-run       Show planned changes without writing files
+      --background    Install an always-on bridge that starts at login
+      --no-background Do not install the login background bridge
   -h, --help          Show this help
 `.trim());
 }
@@ -549,6 +556,38 @@ export async function runSetup({
     }
   }
 
+  let installBackground = options.background;
+  if (installBackground === null) {
+    if (options.yes || options.dryRun) {
+      installBackground = true;
+    } else if (stdin.isTTY) {
+      if (!rl) rl = readline.createInterface({ input: stdin, output: stdout });
+      const answer = await rl.question(
+        "\nInstall the background bridge so Figma connects without Terminal? [Y/n] ",
+      );
+      installBackground = !/^n(o)?$/i.test(answer.trim());
+    } else {
+      installBackground = false;
+    }
+  }
+
+  if (installBackground) {
+    console.log("\nBackground bridge");
+    try {
+      const result = await installBackgroundService({
+        platform,
+        home,
+        env,
+        nodePath,
+        dryRun: options.dryRun,
+      });
+      results.push({ client: "background", ...result });
+    } catch (error) {
+      console.error(`  ERROR: ${error.message}`);
+      results.push({ client: "background", status: "error", error });
+    }
+  }
+
   if (rl) rl.close();
 
   const failures = results.filter(result => result.status === "error");
@@ -556,6 +595,9 @@ export async function runSetup({
   const unchanged = results.filter(result => result.status === "unchanged").length;
   const skipped = results.filter(result => result.status === "skipped").length;
   const previews = results.filter(result => result.status === "dry-run").length;
+  const backgroundInstalled = results.some(
+    result => result.client === "background" && result.status === "installed",
+  );
 
   console.log("\nSummary");
   console.log(`  Configured: ${changed}`);
@@ -568,7 +610,12 @@ export async function runSetup({
     console.log("\nNext steps");
     console.log("  1. Fully quit and reopen the configured MCP client.");
     console.log("  2. In Figma Desktop, import plugin/manifest.json once.");
-    console.log("  3. Run Figma UI MCP Bridge · Kiettt8. No Terminal command is needed.");
+    console.log("  3. Run Figma UI MCP Bridge · Kiettt8.");
+    console.log(
+      backgroundInstalled
+        ? "  The local bridge is already running in the background. No Terminal command is needed."
+        : "  The MCP client starts the server when needed; no manual npx command is required.",
+    );
   }
 
   return { exitCode: failures.length ? 1 : 0, results };
