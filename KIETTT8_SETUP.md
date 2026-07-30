@@ -223,9 +223,9 @@ Close unused plugin instances or pass the correct `sessionId` when multiple Figm
 - Apply firewall or loopback binding controls before using it on an untrusted network.
 - Review every AI-generated write operation before using the plugin on production design files.
 
-## 11. Pull updates from the original project
+## 11. Review updates from the original project
 
-This repository is a fork of `TranHoaiHung/figma-ui-mcp`.
+This is a standalone repository derived from `TranHoaiHung/figma-ui-mcp`. It is not part of the original repository's fork network.
 
 Configure the upstream remote once:
 
@@ -233,17 +233,20 @@ Configure the upstream remote once:
 git remote add upstream https://github.com/TranHoaiHung/figma-ui-mcp.git
 ```
 
-Update the custom edition:
+Fetch the original project's history:
 
 ```bash
 git fetch upstream
-git checkout main
-git merge upstream/main
 ```
 
-Resolve any conflicts in `plugin/ui.html`, validate the custom UI, and push:
+Because the repositories have independent histories, review changes on a temporary branch instead of merging `upstream/main` directly into `main`. Select only the changes needed by this custom edition, preserve `plugin/ui.html` and `plugin/manifest.json`, then validate before pushing:
 
 ```bash
+git switch -c review-upstream-update
+# Apply and test selected upstream changes here.
+npm run build:plugin
+git switch main
+git merge --no-ff review-upstream-update
 git push origin main
 ```
 
