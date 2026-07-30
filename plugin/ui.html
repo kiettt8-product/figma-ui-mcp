@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Figma UI MCP Bridge · Kiettt8</title>
+  <style>
+    :root {
+      --brand-primary: #0033c9;
+      --brand-primary-pressed: #0029a1;
+      --brand-primary-soft: #e7f6ff;
+      --text-primary: #001f3e;
+      --text-secondary: #5b7084;
+      --text-tertiary: #99a5b2;
+      --text-disabled: #ccd2d8;
+      --surface-base: #ffffff;
+      --surface-subtle: #f5f9ff;
+      --surface-muted: #f2f4f5;
+      --border-default: #e6e9ec;
+      --border-subtle: #eef4fe;
+      --status-success: #00cf6a;
+      --status-success-ink: #007a3f;
+      --status-success-soft: #eefff5;
+      --status-danger: #e3173c;
+      --status-danger-ink: #ba1231;
+      --status-danger-soft: #fff2f4;
+      --status-warning: #f58000;
+      --status-warning-ink: #9a4b00;
+      --status-warning-soft: #fff7e8;
+      --status-info: #00a1e4;
+      --status-info-ink: #006d9e;
+      --focus-ring: #81c4ff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      height: 420px;
+      padding: 16px;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      background: var(--surface-base);
+      color: var(--text-primary);
+      font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 12px;
+      line-height: 18px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      margin-bottom: 12px;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: var(--brand-primary-soft);
+    }
+
+    .logo svg { width: 24px; height: 24px; }
+
+    .header-copy {
+      min-width: 0;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    header h1 {
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 20px;
+      letter-spacing: -0.1px;
+    }
+
+    .header-meta {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .endpoint {
+      min-height: 20px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 0;
+      background: transparent;
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: 11px;
+      line-height: 16px;
+      cursor: pointer;
+    }
+
+    .endpoint svg { width: 12px; height: 12px; }
+    .endpoint:hover { color: var(--brand-primary); }
+    .endpoint:active { color: var(--brand-primary-pressed); }
+
+    .custom-credit {
+      color: var(--text-tertiary);
+      font-size: 10px;
+      line-height: 16px;
+      white-space: nowrap;
+    }
+
+    /* Status bar */
+    .status-panel {
+      min-height: 44px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      background: var(--surface-subtle);
+      transition: background-color 180ms ease-out, border-color 180ms ease-out;
+    }
+
+    .status-panel.is-green {
+      border-color: #c9f5dc;
+      background: var(--status-success-soft);
+    }
+
+    .status-panel.is-red {
+      border-color: #f9d1d8;
+      background: var(--status-danger-soft);
+    }
+
+    .status-panel.is-yellow {
+      border-color: #ffe3b5;
+      background: var(--status-warning-soft);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: background-color 180ms ease-out;
+    }
+
+    .dot.green  { background: var(--status-success); }
+    .dot.red    { background: var(--status-danger); }
+    .dot.yellow { background: var(--status-warning); animation: pulse 1.2s ease infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)} }
+
+    .status-label {
+      flex: 1;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 16px;
+    }
+
+    .badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 16px;
+    }
+
+    /* Stats */
+    .stats {
+      min-height: 56px;
+      display: flex;
+      flex-shrink: 0;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-default);
+      border-radius: 12px;
+      background: var(--surface-base);
+      overflow: hidden;
+    }
+
+    .stat {
+      position: relative;
+      flex: 1;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .stat + .stat::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 1px;
+      background: var(--border-default);
+    }
+
+    .stat .n {
+      color: var(--text-primary);
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 20px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat .l {
+      color: var(--text-secondary);
+      font-size: 11px;
+      line-height: 16px;
+    }
+
+    .stat:last-child .n.has-errors { color: var(--status-danger); }
+
+    /* Log */
+    .log-wrap {
+      min-height: 0;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      margin-bottom: 12px;
+    }
+
+    .section-heading {
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .log-label {
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 16px;
+    }
+
+    .clear-action {
+      min-width: 44px;
+      min-height: 24px;
+      padding: 0 4px;
+      border: 0;
+      background: transparent;
+      color: var(--brand-primary);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 16px;
+      cursor: pointer;
+    }
+
+    .clear-action:hover { color: var(--brand-primary-pressed); }
+    .clear-action:active { opacity: 0.72; }
+
+    .log {
+      flex: 1;
+      min-height: 0;
+      padding: 10px 12px;
+      overflow-y: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 10px;
+      line-height: 16px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log .ok   { color: var(--status-success-ink); }
+    .log .err  { color: var(--status-danger-ink); }
+    .log .info { color: var(--status-info-ink); }
+
+    .log-empty {
+      height: 100%;
+      min-height: 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .log-empty strong {
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 18px;
+    }
+
+    .log-empty span {
+      color: var(--text-secondary);
+      font-size: 11px;
+      line-height: 16px;
+    }
+
+    /* Buttons */
+    .btn-row {
+      min-height: 44px;
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .action-button {
+      min-height: 44px;
+      padding: 0 14px;
+      display: inline-flex;
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid var(--border-default);
+      border-radius: 8px;
+      background: var(--surface-base);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 16px;
+      cursor: pointer;
+      transition: background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out;
+    }
+
+    .action-button svg { width: 16px; height: 16px; }
+    .action-button:hover { border-color: #d3d9df; background: var(--surface-subtle); }
+    .action-button:active { background: var(--surface-muted); }
+
+    .action-button.primary {
+      border-color: var(--brand-primary);
+      background: var(--brand-primary);
+      color: #ffffff;
+    }
+
+    .action-button.primary:hover {
+      border-color: var(--brand-primary-pressed);
+      background: var(--brand-primary-pressed);
+    }
+
+    .action-button.primary:active {
+      border-color: #00247f;
+      background: #00247f;
+    }
+
+    button:focus-visible {
+      outline: 3px solid var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    button:disabled {
+      border-color: var(--surface-muted);
+      background: var(--surface-muted);
+      color: var(--text-disabled);
+      cursor: not-allowed;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="3" y="5" width="7" height="6" rx="2" fill="#0033C9"/>
+        <rect x="14" y="13" width="7" height="6" rx="2" fill="#0033C9"/>
+        <path d="M9.5 8h2.25A4.25 4.25 0 0 1 16 12.25V14" stroke="#0033C9" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M14.5 16h-2.25A4.25 4.25 0 0 1 8 11.75V10" stroke="#00A1E4" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="header-copy">
+      <h1>Figma UI MCP Bridge</h1>
+      <div class="header-meta">
+        <button type="button" class="endpoint" onclick="changePort()" title="Change bridge port" aria-label="Change bridge port">
+          localhost:<span id="port-display">38451</span>
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M10.6 2.6a1.4 1.4 0 0 1 2 2L6 11.2 3.2 12.8 4.8 10l5.8-7.4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <span class="custom-credit">Custom by Kiettt8</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="status-panel is-yellow" id="status-panel" role="status" aria-live="polite">
+    <div class="dot yellow" id="dot"></div>
+    <span class="status-label" id="status-text">Connecting...</span>
+    <span class="badge" id="mode-badge">—</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="write-count">0</div><div class="l">Writes</div></div>
+    <div class="stat"><div class="n" id="read-count">0</div><div class="l">Reads</div></div>
+    <div class="stat"><div class="n" id="err-count">0</div><div class="l">Errors</div></div>
+  </div>
+
+  <div class="log-wrap">
+    <div class="section-heading">
+      <div class="log-label">Activity</div>
+      <button type="button" class="clear-action" onclick="clearLog()">Clear</button>
+    </div>
+    <div class="log" id="log" role="log" aria-live="polite">
+      <div class="log-empty" id="log-empty">
+        <strong>No activity yet</strong>
+        <span>Bridge events will appear here</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button type="button" class="action-button" onclick="autoDetectPort()">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="5.25" stroke="currentColor" stroke-width="1.4"/>
+        <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+        <path d="M8 1.5V3M8 13v1.5M14.5 8H13M3 8H1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      Auto-detect
+    </button>
+    <button type="button" class="action-button primary" id="reconnect-button" onclick="reconnect()">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M13 5.5A5.5 5.5 0 1 0 13.2 10M13 2.5v3h-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Reconnect
+    </button>
+  </div>
+
+  <script>
+    var currentPort = 38451;
+    var BRIDGE  = "http://localhost:" + currentPort;
+    var POLL_MS = 300;
+    var POLL_MAX_MS = 3000;         // lower cap — recover faster
+    var LONG_POLL_TIMEOUT = 12000;  // server holds 8s + network buffer
+    var SHORT_POLL_TIMEOUT = 3000;  // used when reconnecting (no long poll)
+    var consecutiveErrors = 0;
+    var everConnected = false;      // track if we ever had a successful connection
+    var lastSuccessfulPollAt = Date.now();  // for visibility-driven reconnect heuristic
+    var sessionId = null;        // assigned from plugin main thread (fileName-based)
+    var fileName = null;
+
+    var writeCount = 0, readCount = 0, errCount = 0;
+    var polling = true;
+
+    var logEl    = document.getElementById("log");
+    var dotEl    = document.getElementById("dot");
+    var statusEl = document.getElementById("status-text");
+    var modeEl   = document.getElementById("mode-badge");
+    var statusPanelEl = document.getElementById("status-panel");
+    var reconnectButtonEl = document.getElementById("reconnect-button");
+
+    var READ_OPS = ["get_selection","get_design","get_page_nodes","screenshot","get_styles","get_local_components","get_viewport","get_variables","export_svg","get_node_detail","export_image","search_nodes","scan_design"];
+
+    function setStatus(state, text, mode) {
+      dotEl.className = "dot " + state;
+      statusPanelEl.className = "status-panel is-" + state;
+      statusEl.textContent = text;
+      if (mode) modeEl.textContent = mode;
+      else if (state !== "green") modeEl.textContent = "—";
+    }
+
+    function log(msg, cls) {
+      var emptyState = document.getElementById("log-empty");
+      if (emptyState) emptyState.remove();
+      var line = document.createElement("div");
+      if (cls) line.className = cls;
+      var ts = new Date().toLocaleTimeString("en", { hour12: false });
+      line.textContent = ts + "  " + msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      while (logEl.children.length > 200) logEl.removeChild(logEl.firstChild);
+    }
+
+    function clearLog() {
+      logEl.innerHTML = '<div class="log-empty" id="log-empty"><strong>No activity yet</strong><span>Bridge events will appear here</span></div>';
+    }
+    function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+    function getBackoff() {
+      // Fast retry first 3 attempts (300, 600, 1200ms), then cap at 3s
+      return Math.min(POLL_MS * Math.pow(2, Math.min(consecutiveErrors - 1, 3)), POLL_MAX_MS);
+    }
+
+    async function sendResponse(id, success, data, error) {
+      try {
+        await fetch(BRIDGE + "/response", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: id, success: success, data: data !== undefined ? data : null, error: error !== undefined ? error : null })
+        });
+      } catch (e) {
+        log("Response failed: " + e.message, "err");
+      }
+    }
+
+    function dispatchToMain(req) {
+      parent.postMessage({ pluginMessage: req }, "*");
+    }
+
+    var activeAbortController = null;   // exposed so reconnect() can cancel an in-flight long poll
+
+    async function poll() {
+      while (polling) {
+        try {
+          var pollUrl = BRIDGE + "/poll";
+          var qs = [];
+          if (sessionId) qs.push("sessionId=" + encodeURIComponent(sessionId));
+          if (fileName) qs.push("fileName=" + encodeURIComponent(fileName));
+          if (qs.length) pollUrl += "?" + qs.join("&");
+          // Use short timeout when reconnecting, long poll when stable
+          var fetchTimeout = consecutiveErrors > 0 ? SHORT_POLL_TIMEOUT : LONG_POLL_TIMEOUT;
+          activeAbortController = new AbortController();
+          var timeoutId = setTimeout(function() { activeAbortController.abort(); }, fetchTimeout);
+          var res;
+          try { res = await fetch(pollUrl, { signal: activeAbortController.signal }); }
+          finally { clearTimeout(timeoutId); activeAbortController = null; }
+          if (!res.ok) { setStatus("yellow", "Bridge not responding"); consecutiveErrors++; await sleep(getBackoff()); continue; }
+
+          var body = await res.json();
+          var reqs = body.requests;
+          setStatus("green", reqs.length ? reqs.length + " cmd(s)" : "Connected", body.mode || "ready");
+
+          consecutiveErrors = 0;
+          everConnected = true;
+          lastSuccessfulPollAt = Date.now();
+
+          for (var i = 0; i < reqs.length; i++) {
+            var req = reqs[i];
+            log("→ " + req.operation, READ_OPS.indexOf(req.operation) >= 0 ? "info" : "ok");
+            dispatchToMain(req);
+          }
+        } catch (e) {
+          consecutiveErrors++;
+          var backoff = getBackoff();
+          if (consecutiveErrors <= 5) {
+            setStatus("yellow", "Waiting for MCP server... (" + consecutiveErrors + ")");
+          } else if (consecutiveErrors <= 10) {
+            setStatus("yellow", "Still waiting — first run may take 15s to download");
+          } else {
+            setStatus("red", "Cannot connect — run: npx figma-ui-mcp");
+          }
+          if (consecutiveErrors === 1) log("Connecting to bridge — if first run, npx is downloading...", "info");
+          await sleep(backoff);
+          continue;
+        }
+        await sleep(POLL_MS);
+      }
+    }
+
+    function reconnect() {
+      polling = false;
+      reconnectButtonEl.disabled = true;
+      // Abort the in-flight long poll so the loop exits immediately,
+      // otherwise it sits inside `await fetch(...)` for up to 12s.
+      if (activeAbortController) {
+        try { activeAbortController.abort(); } catch (e) {}
+      }
+      consecutiveErrors = 0;
+      setStatus("yellow", "Reconnecting...");
+      setTimeout(function() {
+        polling = true;
+        reconnectButtonEl.disabled = false;
+        poll();
+      }, 300);
+    }
+
+    // Tab visibility — when user returns to Figma after a long pause,
+    // immediately force-reconnect so they don't wait for the next poll cycle
+    // (browsers throttle background fetch to ~1Hz; HEALTH_TTL may have expired).
+    document.addEventListener("visibilitychange", function() {
+      if (document.visibilityState !== "visible" || !everConnected) return;
+      var idleMs = Date.now() - lastSuccessfulPollAt;
+      // Force reconnect if any of:
+      //  - in-flight poll (might be stuck on a backgrounded socket)
+      //  - last successful poll was > 20s ago (server may have expired session)
+      //  - consecutive errors
+      if (consecutiveErrors > 0 || activeAbortController || idleMs > 20000) {
+        log("Tab visible after " + Math.round(idleMs / 1000) + "s — forcing reconnect", "info");
+        reconnect();
+      }
+    });
+
+    function changePort() {
+      var input = prompt("Enter bridge port (default 38451):", currentPort);
+      if (!input) return;
+      var newPort = parseInt(input, 10);
+      if (isNaN(newPort) || newPort < 1024 || newPort > 65535) { alert("Invalid port"); return; }
+      setPort(newPort);
+    }
+
+    function setPort(port) {
+      currentPort = port;
+      BRIDGE = "http://localhost:" + currentPort;
+      document.getElementById("port-display").textContent = currentPort;
+      log("Port set to " + currentPort, "info");
+      reconnect();
+    }
+
+    async function autoDetectPort() {
+      setStatus("yellow", "Scanning ports...");
+      log("Scanning 38451-38460...", "info");
+      for (var p = 38451; p <= 38460; p++) {
+        try {
+          var res = await fetch("http://localhost:" + p + "/health", { signal: AbortSignal.timeout(500) });
+          if (res.ok) {
+            var data = await res.json();
+            if (data.pluginConnected !== undefined) {
+              log("Found bridge on port " + p + (data.pluginConnected ? " (plugin connected)" : " (no plugin)"), "ok");
+              setPort(p);
+              return;
+            }
+          }
+        } catch(e) { /* port not responding */ }
+      }
+      log("No bridge found on 38451-38460. Reset to 38451.", "err");
+      setPort(38451);
+    }
+
+    window.onmessage = async function(event) {
+      var msg = event.data.pluginMessage;
+      if (!msg) return;
+      // Session info from plugin main thread
+      if (msg.type === "session-info") {
+        sessionId = msg.sessionId || null;
+        fileName = msg.fileName || null;
+        if (sessionId) log("Session: " + sessionId + " (" + fileName + ")", "info");
+        return;
+      }
+      var isRead = READ_OPS.indexOf(msg.operation) >= 0;
+      if (msg.success) {
+        if (isRead) { readCount++; document.getElementById("read-count").textContent = readCount; }
+        else        { writeCount++; document.getElementById("write-count").textContent = writeCount; }
+        log("✓ " + (msg.id ? msg.id.slice(-6) : "?"), "ok");
+      } else {
+        errCount++;
+        var errorCountEl = document.getElementById("err-count");
+        errorCountEl.textContent = errCount;
+        errorCountEl.classList.add("has-errors");
+        log("✗ " + (msg.id ? msg.id.slice(-6) : "?") + " " + msg.error, "err");
+      }
+      await sendResponse(msg.id, msg.success, msg.data, msg.error);
+    };
+
+    poll();
+  </script>
+</body>
+</html>
