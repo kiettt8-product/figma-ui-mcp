@@ -29,15 +29,38 @@ cd figma-ui-mcp
 npm install
 ```
 
+Configure any detected MCP clients:
+
+```bash
+npm run setup
+```
+
+The wizard supports Codex, Claude Code, Claude Desktop, Cursor, VS Code, and
+Windsurf. It uses absolute paths, preserves unrelated MCP entries, and creates
+a timestamped backup before changing an existing config.
+
+For unattended setup:
+
+```bash
+npm run setup -- --client codex,cursor --yes
+```
+
+Preview changes without writing files:
+
+```bash
+npm run setup -- --client all --dry-run
+```
+
 Verify the local server:
 
 ```bash
 node server/cli.js --version
 ```
 
-## 3. Configure the MCP client
+## 3. Configure the MCP client manually
 
-Use an absolute path to `server/index.js`.
+Use this section only if the setup wizard cannot update the client. Use an
+absolute path to `server/index.js`.
 
 ### Codex
 

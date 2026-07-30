@@ -111,27 +111,52 @@ cd figma-ui-mcp
 npm install
 ```
 
-### Bước 3. Lấy đường dẫn tuyệt đối
+### Bước 3. Tự động cấu hình MCP client
 
-Trên macOS hoặc Linux:
+Chạy setup wizard:
 
 ```bash
-pwd
+npm run setup
 ```
 
-Trên Windows PowerShell:
+Wizard sẽ:
 
-```powershell
-(Get-Location).Path
+- Phát hiện Codex, Claude Code, Claude Desktop, Cursor, VS Code và Windsurf.
+- Hiển thị chính xác file cấu hình sẽ thay đổi.
+- Dùng đường dẫn tuyệt đối tới Node.js và `server/index.js`.
+- Chỉ thay entry `figma-ui-mcp`, giữ nguyên các MCP server khác.
+- Tạo file backup trước khi cập nhật một cấu hình đã tồn tại.
+- Không khởi chạy cửa sổ Terminal khi sử dụng hằng ngày.
+
+Nhấn Enter để cấu hình tất cả client được phát hiện, hoặc nhập danh sách
+client cần cấu hình.
+
+Có thể chạy không tương tác:
+
+```bash
+npm run setup -- --client codex,cursor --yes
+npm run setup -- --client claude --yes
+npm run setup -- --client all --yes
 ```
 
-Ví dụ:
+Xem trước thay đổi mà không ghi file:
 
-```text
-/Users/your-name/Projects/figma-ui-mcp
+```bash
+npm run setup -- --client all --dry-run
 ```
 
-Đường dẫn này được sử dụng trong cấu hình MCP client.
+Các ID được hỗ trợ:
+
+| ID | Client |
+| --- | --- |
+| `codex` | Codex và ChatGPT desktop có Codex |
+| `claude-code` | Claude Code |
+| `claude-desktop` | Claude Desktop |
+| `cursor` | Cursor |
+| `vscode` | Visual Studio Code |
+| `windsurf` | Windsurf hoặc Devin Cascade |
+
+Alias `claude` cấu hình cả Claude Code và Claude Desktop.
 
 ### Bước 4. Kiểm tra server
 
@@ -143,10 +168,11 @@ Kết quả cần hiển thị phiên bản của `figma-ui-mcp`.
 
 ---
 
-## 6. Cấu hình MCP client
+## 6. Cấu hình MCP client thủ công
 
-Chỉ cấu hình một trong các phương án bên dưới. Luôn dùng đường dẫn tuyệt đối
-đến `server/index.js`.
+Chỉ dùng phần này khi setup wizard không nhận diện đúng client hoặc policy
+công ty không cho phép cập nhật file cấu hình tự động. Luôn dùng đường dẫn
+tuyệt đối đến `server/index.js`.
 
 ### 6.1. Codex
 
@@ -179,7 +205,7 @@ Lưu file, thoát hoàn toàn Codex rồi mở lại.
 Chạy:
 
 ```bash
-claude mcp add --scope user figma-ui-mcp -- node /ABSOLUTE/PATH/TO/figma-ui-mcp/server/index.js
+claude mcp add --transport stdio --scope user figma-ui-mcp -- node /ABSOLUTE/PATH/TO/figma-ui-mcp/server/index.js
 ```
 
 Kiểm tra:
@@ -244,9 +270,13 @@ Khởi động lại VS Code sau khi lưu cấu hình.
 Sau khi MCP client khởi động lại:
 
 1. Client nhận diện server `figma-ui-mcp`.
-2. Tiến trình Node.js chạy `server/index.js`.
+2. Client tự chạy tiến trình Node.js trong background.
 3. Bridge mở port `38451` hoặc một port dự phòng trong dải tiếp theo.
 4. `figma_status` có thể được gọi, dù plugin có thể chưa kết nối ở bước này.
+
+Không chạy thêm `npm start` hoặc `npx figma-ui-mcp` trong Terminal. Nếu
+Terminal vẫn đang chạy một bản MCP cũ, nhấn `Ctrl+C`, đóng Terminal rồi
+khởi động lại MCP client.
 
 ---
 
@@ -575,7 +605,9 @@ figma-ui-mcp/
 |   |-- code-executor.js
 |   `-- api-docs.js
 |-- scripts/
-|   `-- build-plugin.js
+|   |-- build-plugin.js
+|   |-- setup-mcp.js
+|   `-- test-setup-mcp.mjs
 |-- package.json
 |-- CHANGELOG.md
 |-- LICENSE
@@ -594,6 +626,8 @@ Bridge này được thiết kế cho local development.
 4. Kiểm tra các thao tác do AI tạo trước khi áp dụng lên design file quan trọng.
 5. Không lưu credential hoặc dữ liệu nhạy cảm trong prompt, source code hoặc
    Figma plugin.
+6. Setup wizard không in nội dung config hoặc credential ra màn hình. Hãy
+   kiểm tra file backup trước khi xóa.
 
 ---
 

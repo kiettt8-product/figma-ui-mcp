@@ -1,8 +1,8 @@
 {
   "name": "figma-ui-mcp",
   "version": "2.5.26",
-  "description": "Claude Code to Figma — Bidirectional MCP bridge. AI draws UI on Figma canvas, reads designs back. Works with Claude, Cursor, VS Code, Windsurf, Antigravity. No API key needed.",
-  "mcpName": "io.github.TranHoaiHung/figma-ui-mcp",
+  "description": "Kiettt8 custom Figma MCP bridge with a one-command setup wizard for Codex, Claude, Cursor, VS Code, and Windsurf.",
+  "mcpName": "io.github.kiettt8-product/figma-ui-mcp",
   "type": "module",
   "bin": {
     "figma-ui-mcp": "./server/cli.js"
@@ -14,6 +14,7 @@
     "server/code-executor.js",
     "server/tool-definitions.js",
     "server/api-docs.js",
+    "scripts/setup-mcp.js",
     "plugin/code.js",
     "plugin/manifest.json",
     "plugin/ui.html",
@@ -21,23 +22,27 @@
     "plugin/icon32.png"
   ],
   "scripts": {
+    "setup": "node scripts/setup-mcp.js",
+    "setup:dry-run": "node scripts/setup-mcp.js --dry-run",
+    "test:setup": "node scripts/test-setup-mcp.mjs",
     "start": "node server/index.js",
     "build:plugin": "node scripts/build-plugin.js",
     "dev": "node --watch scripts/build-plugin.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4"
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "jsonc-parser": "^3.3.1"
   },
   "engines": { "node": ">=18" },
   "keywords": ["figma", "mcp", "model-context-protocol", "claude", "claude-code", "cursor", "windsurf", "vscode", "antigravity", "ai", "design", "plugin", "figma-plugin", "ui-generation", "figma-mcp", "ai-to-figma", "claude-to-figma", "code-to-figma", "design-to-code", "figma-bridge", "figma-automation"],
   "license": "MIT",
-  "author": "TranHoaiHung",
-  "homepage": "https://github.com/TranHoaiHung/figma-ui-mcp#readme",
+  "author": "Kiettt8",
+  "homepage": "https://github.com/kiettt8-product/figma-ui-mcp#readme",
   "bugs": {
-    "url": "https://github.com/TranHoaiHung/figma-ui-mcp/issues"
+    "url": "https://github.com/kiettt8-product/figma-ui-mcp/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/TranHoaiHung/figma-ui-mcp"
+    "url": "https://github.com/kiettt8-product/figma-ui-mcp"
   }
 }
