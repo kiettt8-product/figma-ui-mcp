@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.5 icon library tests — verify priority order + fill injection.
+ * Network icon-library tests — verify priority order + fill injection.
  * Uses real httpFetch to unpkg (network required).
  */
 import { executeCode } from "../server/code-executor.js";

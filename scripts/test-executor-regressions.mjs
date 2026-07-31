@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Tests for v2.5.14 bug fixes (BUG-01..05) and code-quality improvements.
+// Executor and code-quality regression tests.
 // Run: node scripts/test-v2514.mjs
 import { executeCode } from "../server/code-executor.js";
 

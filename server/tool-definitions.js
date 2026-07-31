@@ -12,6 +12,8 @@ export const TOOLS = [
     description:
       "Execute JavaScript code to CREATE or MODIFY designs in Figma. " +
       "⚠️ MANDATORY: Call figma_docs BEFORE writing any design code. Skipping figma_docs causes hardcoded colors, wrong sizing, broken layouts, and low-quality UI. " +
+      "When a design-system bundle is configured, call design_system_plan with the user's full request before writing; the server enforces this gate. " +
+      "Use figma.loadBundleAsset(reference, opts) for resolved internal SVG or raster assets, then call figma_validate after writing. " +
       "Use the `figma` proxy object — all methods return Promises, use async/await. " +
       "Operations: create, modify, delete, clone, group, ungroup, flatten, resize, " +
       "set_selection, set_viewport, batch (multiple ops in one call). " +
@@ -55,6 +57,7 @@ export const TOOLS = [
             "get_styles", "get_local_components", "get_viewport", "get_variables",
             "get_node_detail", "get_css",
             "get_design_context", "get_component_map", "get_unmapped_components",
+            "getReactions",
             "export_image",
             "search_nodes",
             "scan_design"
@@ -70,6 +73,7 @@ export const TOOLS = [
             "get_selection: full design tree of selected node(s) + design tokens summary.\n" +
             "get_design: full node tree for a frame/page (depth param: number or 'full').\n" +
             "get_page_nodes: top-level frames on the current page.\n" +
+            "getReactions: prototype triggers and actions attached to a node.\n" +
             "── Styles & tokens ──\n" +
             "get_styles: all local paint, text, effect, grid styles.\n" +
             "get_variables: all local Design Token variables — collections, modes, resolved values.\n" +
@@ -138,6 +142,158 @@ export const TOOLS = [
         sessionId: {
           type: "string",
           description: "Target a specific Figma file/tab. Omit to auto-select.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "design_system_status",
+    description:
+      "Inspect the configured portable design-system bundle and run dependency preflight. " +
+      "Returns bundle version, available semantic recipes, required fonts, missing weights, and readiness. " +
+      "Call this before generating a design that must follow an internal design system.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        reload: {
+          type: "boolean",
+          description: "Reload the bundle manifest and semantic files from disk before checking.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "design_system_context",
+    description:
+      "Load prompt-ready semantic design-system rules from the configured bundle. " +
+      "Includes font dependencies, spacing tokens, typography roles, component roles, " +
+      "generation policies, and an optional screen recipe with an Auto Layout blueprint. " +
+      "Use this instead of guessing values from screenshots.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        recipe: {
+          type: "string",
+          description:
+            "Semantic recipe ID such as 'voucher-pocket'. Omit to load only global design-system rules.",
+        },
+        reload: {
+          type: "boolean",
+          description: "Reload bundle files before building context.",
+        },
+        sessionId: {
+          type: "string",
+          description:
+            "Scope the pre-write gate to a specific Figma tab when multiple files are connected.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "design_system_plan",
+    description:
+      "Turn the user's natural-language design request into a deterministic, bundle-backed " +
+      "generation plan. Resolves product intent, screen patterns, recipes, states, candidate " +
+      "golden references, bundled assets, prototype flow, and the validation/repair checklist. " +
+      "MANDATORY before figma_write whenever a design-system bundle is configured. Pass the " +
+      "user's complete request, not a shortened keyword.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "The user's complete design request in Vietnamese or English.",
+        },
+        recipe: {
+          type: "string",
+          description: "Optional exact recipe override. Normally omit and let routing resolve it.",
+        },
+        maxAssets: {
+          type: "number",
+          minimum: 1,
+          maximum: 50,
+          description: "Maximum asset candidates included in the plan. Default 12.",
+        },
+        reload: {
+          type: "boolean",
+          description: "Reload bundle files before planning.",
+        },
+        sessionId: {
+          type: "string",
+          description:
+            "Scope this plan to a specific Figma tab when multiple files are connected. " +
+            "Use the same sessionId in figma_write.",
+        },
+      },
+      required: ["prompt"],
+    },
+  },
+  {
+    name: "design_system_assets",
+    description:
+      "Search the configured portable bundle for checksum-addressable semantic assets, " +
+      "component SVGs, icons, merchant marks, and raster images. Prefer an exact semantic " +
+      "asset ID from design_system_plan. Import a result inside figma_write with " +
+      "figma.loadBundleAsset(asset.id, opts); never draw a placeholder when a required " +
+      "bundled asset exists.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Semantic ID, asset name, alias, merchant name, icon name, or keywords.",
+        },
+        source: {
+          type: "string",
+          enum: ["semantic", "component", "image"],
+          description: "Optional asset source filter.",
+        },
+        category: {
+          type: "string",
+          description: "Optional category filter such as merchant-logo, icons, or brand-assets.",
+        },
+        limit: {
+          type: "number",
+          minimum: 1,
+          maximum: 50,
+          description: "Maximum results. Default 12.",
+        },
+        reload: {
+          type: "boolean",
+          description: "Reload bundle files before searching.",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "figma_validate",
+    description:
+      "Validate a generated Figma frame against the configured design-system bundle. " +
+      "Checks fonts, typography roles, token colors, viewport, component dimensions, " +
+      "repeated-item spacing, vertical rhythm, and recipe-specific padding. " +
+      "Fix every error and re-run before handing the design to the user.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        nodeId: {
+          type: "string",
+          description: "Root frame node ID to validate.",
+        },
+        nodeName: {
+          type: "string",
+          description: "Root frame name when nodeId is not known.",
+        },
+        recipe: {
+          type: "string",
+          description: "Semantic recipe ID to enforce.",
+        },
+        sessionId: {
+          type: "string",
+          description: "Target Figma file session when multiple files are connected.",
         },
       },
       required: [],

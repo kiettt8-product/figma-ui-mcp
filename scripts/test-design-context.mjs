@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.9 tests — design-to-code gap closure:
+ * Design-context mapping tests:
  * - get_design_context
  * - get_component_map
  * - get_unmapped_components
@@ -24,8 +24,9 @@ const builtPlug = readFileSync(new URL("../plugin/code.js", import.meta.url), "u
 console.log("\n── get_design_context ──");
 {
   assert("handler defined", src.includes("handlers.get_design_context = async function"));
-  assert("builds variable name map via getVariableByIdAsync",
-    src.includes("varNameMap[v.id] = v.name"));
+  assert("builds variable name map via batched getLocalVariablesAsync",
+    src.includes("getLocalVariablesAsync") &&
+    src.includes("varNameMap[lv.id] = lv.name"));
   assert("builds style name map via getLocalPaintStylesAsync",
     src.includes("styleNameMap[s.id] = s.name"));
   assert("resolveFill uses var(--token) for bound variables",

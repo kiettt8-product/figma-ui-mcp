@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.7 tests — BUG-07 (modify content reflow), BUG-08 (insertIndex), BUG-10 (stroke-width normalize).
+ * Content reflow, insertIndex and SVG stroke normalization tests.
  */
 import { readFileSync } from "fs";
 import { executeCode } from "../server/code-executor.js";

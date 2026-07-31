@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.4 regression tests — typography tokens + variable bindings.
+ * Typography token and variable-binding regression tests.
  * Uses the code-executor with mock bridge (no live Figma needed).
  */
 import { executeCode } from "../server/code-executor.js";

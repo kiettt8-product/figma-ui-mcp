@@ -1004,15 +1004,41 @@ figma_read({ operation: "get_unmapped_components", nodeId: "89:393" })
 // Click → navigate with Smart Animate
 await figma.setReactions({ id: btnId, reactions: [{
   trigger: { type: "ON_CLICK" },
-  actions: [{ type: "NAVIGATE", destinationId: targetFrameId,
+  actions: [{ type: "NODE", navigation: "NAVIGATE", destinationId: targetFrameId,
     transition: { type: "SMART_ANIMATE", duration: 0.3, easing: { type: "EASE_IN_AND_OUT" } }
   }]
 }] });
+
+// Aliases are also accepted:
+// NAVIGATE, OPEN_OVERLAY, SWAP, SCROLL_TO, CHANGE_TO
+await figma.setReactions({ id: hotspotId, mode: "append", reactions: [{
+  trigger: { type: "ON_CLICK" },
+  actions: [{ type: "OPEN_OVERLAY", destinationId: bottomSheetId,
+    transition: { type: "MOVE_IN", direction: "BOTTOM", duration: 0.3 }
+  }]
+}] });
+
+// Back and close overlay
+await figma.setReactions({ id: backButtonId, reactions: [{
+  trigger: "ON_CLICK",
+  actions: [{ type: "BACK" }]
+}] });
+await figma.setReactions({ id: closeButtonId, reactions: [{
+  trigger: "ON_CLICK",
+  actions: [{ type: "CLOSE" }]
+}] });
+
 await figma.getReactions({ id: nodeId })
 await figma.removeReactions({ id: nodeId })
+await figma.removeReactions({ id: nodeId, triggerType: "ON_HOVER" })
 
 // Scroll behavior
-await figma.setScrollBehavior({ id: frameId, overflowDirection: "VERTICAL", clipsContent: true });
+await figma.setScrollBehavior({
+  id: frameId,
+  overflowDirection: "VERTICAL",
+  clipsContent: true,
+  numberOfFixedChildren: 1
+});
 // overflowDirection: "NONE" | "HORIZONTAL" | "VERTICAL" | "BOTH"
 
 // Component variants & swap
@@ -1420,6 +1446,27 @@ await figma.loadImage("https://images.unsplash.com/photo-xxx?w=48&h=48&fit=crop"
   name: "avatar", cornerRadius: 16, scaleMode: "FILL"
 });
 \`\`\`
+
+---
+
+## figma.loadBundleAsset(reference, opts)
+
+Import a local SVG or raster asset from the configured portable design-system
+bundle. Call \`design_system_plan\` or \`design_system_assets\` first and pass an
+exact semantic ID whenever possible:
+
+\`\`\`js
+await figma.loadBundleAsset("merchant.vinamilk", {
+  parentId: merchantSlot.id,
+  width: 36,
+  height: 36,
+  name: "Merchant Logo"
+});
+\`\`\`
+
+The MCP server resolves the path inside the configured bundle, enforces a size
+limit, and verifies the SHA-256 checksum when the manifest contains one. Do not
+replace a required bundled merchant mark with a placeholder.
 
 ---
 

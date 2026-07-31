@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.8 tests — read design-to-code improvements:
+ * Read-detail design-to-code tests:
  * P1: boundVariables resolved (name+value, not just IDs)
  * P2: get_css operation
  * P3: instance overrides full list

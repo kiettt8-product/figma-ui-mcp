@@ -132,9 +132,15 @@ handlers.scan_design = async function(params) {
       try {
         textInfo.content = node.characters;
         textInfo.fill = getFillHex(node);
-        textInfo.fontSize = node.fontSize;
-        textInfo.fontFamily = node.fontName ? node.fontName.family : null;
-        textInfo.fontWeight = node.fontName ? node.fontName.style : null;
+        textInfo.fontSize = typeof node.fontSize === "symbol" ? "mixed" : node.fontSize;
+        textInfo.fontFamily =
+          !node.fontName || typeof node.fontName === "symbol"
+            ? "mixed"
+            : node.fontName.family;
+        textInfo.fontWeight =
+          !node.fontName || typeof node.fontName === "symbol"
+            ? "mixed"
+            : node.fontName.style;
       } catch(e) {
         try { textInfo.content = node.characters; } catch(e2) {}
       }
@@ -142,7 +148,13 @@ handlers.scan_design = async function(params) {
 
       // Count font usage
       if (textInfo.fontFamily) {
-        var fontKey = textInfo.fontFamily + "/" + (textInfo.fontWeight || "Regular") + "/" + (textInfo.fontSize || "?") + "px";
+        var fontKey =
+          String(textInfo.fontFamily) +
+          "/" +
+          String(textInfo.fontWeight || "Regular") +
+          "/" +
+          String(textInfo.fontSize || "?") +
+          "px";
         summary.allFonts[fontKey] = (summary.allFonts[fontKey] || 0) + 1;
       }
     }

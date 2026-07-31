@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.2 regression tests — validate feedback.md fixes.
+ * Plugin helper regression tests.
  * Uses vm to load plugin helpers directly (no live Figma needed).
  */
 import { readFileSync } from "fs";

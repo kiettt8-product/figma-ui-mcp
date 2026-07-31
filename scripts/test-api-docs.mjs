@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.11 tests — sectioned figma_docs:
+ * Sectioned figma_docs tests:
  * - getDocs() returns index + default (quick-start) section
  * - getDocs("rules") returns rules section
  * - getDocs("layout") returns layout section
@@ -24,13 +24,6 @@ function assert(label, cond, detail = "") {
 const pkg      = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 const index    = readFileSync(new URL("../server/index.js", import.meta.url), "utf-8");
 const toolDefs = readFileSync(new URL("../server/tool-definitions.js", import.meta.url), "utf-8");
-
-// ── version ──────────────────────────────────────────────────────────────────
-console.log("\n── version ──");
-{
-  assert("package.json version is 2.5.11", pkg.version === "2.5.11");
-  assert("server/index.js version is 2.5.11", index.includes('"2.5.11"'));
-}
 
 // ── server/index.js wiring ───────────────────────────────────────────────────
 console.log("\n── server/index.js wiring ──");
@@ -92,5 +85,5 @@ console.log("\n── regression: v2.5.10 fixes ──");
 
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(50)}`);
-console.log(`v2.5.11 tests: ${passed} passed, ${failed} failed`);
+console.log(`API docs tests: ${passed} passed, ${failed} failed`);
 if (errs.length) { errs.forEach(e => console.error(e)); process.exit(1); }

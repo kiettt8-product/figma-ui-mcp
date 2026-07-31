@@ -10,6 +10,7 @@ const files = [
   "src/plugin/paint-and-effects.js",
   "src/plugin/read-helpers.js",
   "src/plugin/handlers-write.js",
+  "src/plugin/handlers-prototype.js",
   "src/plugin/handlers-library.js",
   "src/plugin/handlers-read.js",
   "src/plugin/handlers-read-detail.js",

@@ -13,8 +13,12 @@ import path from "node:path";
 import process from "node:process";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import {
+  BRIDGE_PROTOCOL_VERSION,
+  BRIDGE_SERVICE_ID,
+} from "../server/bridge-server.js";
 
-export const SERVICE_ID = "io.github.kiettt8-product.figma-ui-mcp-bridge";
+export const SERVICE_ID = BRIDGE_SERVICE_ID;
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -191,7 +195,15 @@ function waitForBridge({ timeoutMs = 10_000, port = 38451 } = {}) {
           response.on("data", chunk => { data += chunk; });
           response.on("end", () => {
             try {
-              resolve(JSON.parse(data));
+              const health = JSON.parse(data);
+              if (
+                health.serviceId === BRIDGE_SERVICE_ID &&
+                health.protocolVersion === BRIDGE_PROTOCOL_VERSION
+              ) {
+                resolve(health);
+              } else {
+                retry();
+              }
             } catch {
               retry();
             }

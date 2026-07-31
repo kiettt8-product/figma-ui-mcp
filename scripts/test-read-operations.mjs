@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Backtests for handlers-read.js fixes (issues 7, 8, 9, 10, 12)
+// Regression tests for handlers-read.js operations.
 // Run: node scripts/test-v2514-read.mjs
 import { executeCode } from "../server/code-executor.js";
 

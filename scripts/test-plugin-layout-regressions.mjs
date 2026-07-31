@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Backtests for v2.5.15 fixes: BUG-06, BUG-13/15/16/17/19
+// Plugin layout regression tests.
 // Run: node scripts/test-v2515.mjs
 import { executeCode } from "../server/code-executor.js";
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Tests for v2.5.21: BUG-01 (textStyles async), BUG-02 (VECTOR gradient),
+// Tests for async text styles, VECTOR gradients,
 // BUG-03 (query parentId+limit), BUG-04 (Material→Ionicons hint)
 import { executeCode } from "../server/code-executor.js";
 

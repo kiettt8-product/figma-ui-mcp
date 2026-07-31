@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.10 tests — bug fixes:
+ * Core alias and sandbox proxy regression tests:
  * - BUG-03: `characters` alias for `content` in TEXT create
  * - BUG-04: `fills` array + `fontColor` on TEXT create
  * - BUG-05: `fontColor` alias in modify()
@@ -81,13 +81,6 @@ console.log("\n── BUG-12/13/14: sandbox proxy APIs ──");
     executor.includes("proxy.getCurrentPage") && executor.includes("\"status\""));
 }
 
-// ── version bump ─────────────────────────────────────────────────────────────
-console.log("\n── version ──");
-{
-  assert("package.json version is 2.5.10", pkg.version === "2.5.10");
-  assert("server/index.js version is 2.5.10", index.includes('"2.5.10"'));
-}
-
 // ── regression: prior fixes still present ────────────────────────────────────
 console.log("\n── regression ──");
 {
@@ -116,5 +109,5 @@ console.log("\n── unit: characters alias logic ──");
 
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(50)}`);
-console.log(`v2.5.10 tests: ${passed} passed, ${failed} failed`);
+console.log(`Core alias tests: ${passed} passed, ${failed} failed`);
 if (errs.length) { errs.forEach(e => console.error(e)); process.exit(1); }

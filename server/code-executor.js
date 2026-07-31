@@ -146,7 +146,7 @@ function normalizeArcData(arcData) {
 }
 
 // ─── Build figma proxy with helper methods ────────────────────────────────────
-function buildFigmaProxy(bridge) {
+function buildFigmaProxy(bridge, { loadBundleAsset } = {}) {
   const proxy = { notify: (msg) => Promise.resolve(msg) };
   for (const op of ALL_OPS) {
     proxy[op] = (params = {}) => bridge.sendOperation(op, params);
@@ -214,6 +214,48 @@ function buildFigmaProxy(bridge) {
       height: opts.height || 100,
       imageData: b64,
       scaleMode: opts.scaleMode || "FILL",
+      cornerRadius: opts.cornerRadius,
+    });
+  };
+
+  // ── figma.loadBundleAsset(reference, opts) ──────────────────────────────
+  // Imports a checksum-verified SVG or raster asset from the configured
+  // portable design-system bundle. The VM never receives filesystem access.
+  proxy.loadBundleAsset = async (reference, opts = {}) => {
+    if (!loadBundleAsset) {
+      throw new Error(
+        "No design-system bundle is configured. Run design_system_status first.",
+      );
+    }
+    const resolved = await loadBundleAsset(reference, {
+      maxBytes: opts.maxBytes || 5_000_000,
+    });
+    const asset = resolved.asset;
+    if (asset.mimeType === "image/svg+xml") {
+      return bridge.sendOperation("create", {
+        type: "SVG",
+        name: opts.name || asset.name || `asset/${asset.id}`,
+        parentId: opts.parentId,
+        x: opts.x || 0,
+        y: opts.y || 0,
+        width: opts.width || asset.width || 24,
+        height: opts.height || asset.height || 24,
+        svg: resolved.buffer.toString("utf8"),
+      });
+    }
+    if (!asset.mimeType.startsWith("image/")) {
+      throw new Error(`Unsupported bundle asset type: ${asset.mimeType}`);
+    }
+    return bridge.sendOperation("create", {
+      type: "IMAGE",
+      name: opts.name || asset.name || `asset/${asset.id}`,
+      parentId: opts.parentId,
+      x: opts.x || 0,
+      y: opts.y || 0,
+      width: opts.width || asset.width || 100,
+      height: opts.height || asset.height || 100,
+      imageData: resolved.buffer.toString("base64"),
+      scaleMode: opts.scaleMode || "FIT",
       cornerRadius: opts.cornerRadius,
     });
   };
@@ -367,7 +409,7 @@ function buildConsole(logs) {
 /**
  * @returns {{ success: boolean, result?: unknown, error?: string, logs: string[] }}
  */
-export async function executeCode(code, bridge, sessionId) {
+export async function executeCode(code, bridge, sessionId, options = {}) {
   // Wrap bridge to pin sessionId for all operations in this execution
   var wrappedBridge = sessionId ? {
     sendOperation: function(op, params) { return bridge.sendOperation(op, params, sessionId); }
@@ -375,7 +417,7 @@ export async function executeCode(code, bridge, sessionId) {
 
   const logs = [];
   const ctx = vm.createContext({
-    figma:   buildFigmaProxy(wrappedBridge),
+    figma:   buildFigmaProxy(wrappedBridge, options),
     console: buildConsole(logs),
     // Safe builtins
     Promise, JSON, Math, Object, Array, String, Number,

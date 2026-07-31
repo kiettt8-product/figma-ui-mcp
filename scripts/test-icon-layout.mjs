@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v2.5.6 tests — BUG-16 (loadIcon x/y) and BUG-17 (layoutMode NONE).
+ * Icon positioning and layoutMode NONE tests.
  * Uses mock bridge — no network or Figma plugin required.
  */
 import { executeCode } from "../server/code-executor.js";

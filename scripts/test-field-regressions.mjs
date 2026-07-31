@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// v2.5.26 — regression tests for ALL bugs in feedback.md (BUG-FONT-01/02, MODE-01,
+// Field regression tests for font, mode, connection, text and delete behavior.
 // CONN-01, TS-01, DEL-01, NUM-01, TS-02, TIMEOUT-01, TEXT-01)
 // Strategy: layer A (executor proxy forwarding) + layer B (plugin-side logic via vm sandbox).
 //

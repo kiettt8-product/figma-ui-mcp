@@ -466,7 +466,7 @@
     var statusPanelEl = document.getElementById("status-panel");
     var reconnectButtonEl = document.getElementById("reconnect-button");
 
-    var READ_OPS = ["get_selection","get_design","get_page_nodes","screenshot","get_styles","get_local_components","get_viewport","get_variables","export_svg","get_node_detail","export_image","search_nodes","scan_design"];
+    var READ_OPS = ["get_selection","get_design","get_page_nodes","screenshot","get_styles","get_local_components","get_viewport","get_variables","export_svg","get_node_detail","export_image","search_nodes","scan_design","getReactions"];
 
     function setStatus(state, text, mode) {
       dotEl.className = "dot " + state;
@@ -554,7 +554,7 @@
           } else if (consecutiveErrors <= 10) {
             setStatus("yellow", "Still waiting — first run may take 15s to download");
           } else {
-            setStatus("red", "Cannot connect — run: npx figma-ui-mcp");
+            setStatus("red", "Bridge offline — run setup:background once");
           }
           if (consecutiveErrors === 1) log("Connecting to bridge — if first run, npx is downloading...", "info");
           await sleep(backoff);
@@ -621,7 +621,11 @@
           var res = await fetch("http://localhost:" + p + "/health", { signal: AbortSignal.timeout(500) });
           if (res.ok) {
             var data = await res.json();
-            if (data.pluginConnected !== undefined) {
+            if (
+              data.serviceId === "io.github.kiettt8-product.figma-ui-mcp-bridge" &&
+              data.protocolVersion === 1 &&
+              data.pluginConnected !== undefined
+            ) {
               log("Found bridge on port " + p + (data.pluginConnected ? " (plugin connected)" : " (no plugin)"), "ok");
               setPort(p);
               return;
@@ -658,6 +662,9 @@
       await sendResponse(msg.id, msg.success, msg.data, msg.error);
     };
 
+    // Request session metadata only after the UI listener is ready, otherwise
+    // an eager postMessage from the plugin main thread can be missed.
+    parent.postMessage({ pluginMessage: { type: "ui-ready" } }, "*");
     poll();
   </script>
 </body>

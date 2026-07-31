@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Tests for v2.5.17 fixes: BUG-04 (VECTOR resize) + BUG-11 (H/V path normalization)
+// VECTOR resize and SVG path normalization tests.
 // Run: node scripts/test-v2517.mjs
 import { executeCode } from "../server/code-executor.js";
 import { readFileSync } from "fs";

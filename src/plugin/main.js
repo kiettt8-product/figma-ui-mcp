@@ -2,6 +2,24 @@
 
 figma.showUI(__html__, { width: 320, height: 420, title: "Figma UI MCP Bridge" });
 
+// Give every running plugin instance its own bridge session. Multiple Figma
+// files can keep a development plugin alive at the same time; without this
+// handshake they all poll the legacy `_default` session and may consume each
+// other's commands.
+var bridgeSessionId =
+  "figma-" +
+  Date.now().toString(36) +
+  "-" +
+  Math.random().toString(36).slice(2, 10);
+
+function sendBridgeSessionInfo() {
+  figma.ui.postMessage({
+    type: "session-info",
+    sessionId: bridgeSessionId,
+    fileName: figma.root.name || "Untitled",
+  });
+}
+
 // ─── DISPATCHER ───────────────────────────────────────────────────────────────
 
 // Sanitize data before postMessage — remove Symbol values (e.g. figma.mixed)
@@ -29,6 +47,11 @@ function sanitizeForPostMessage(obj) {
 }
 
 figma.ui.onmessage = async (request) => {
+  if (request && request.type === "ui-ready") {
+    sendBridgeSessionInfo();
+    return;
+  }
+
   const { id, operation, params } = request;
   const handler = handlers[operation];
 

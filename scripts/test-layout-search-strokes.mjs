@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Tests for v2.5.19: BUG-13 (FRAME auto-sizing), BUG-16 (search_nodes text),
+// Tests for FRAME auto-sizing, text search,
 //                    BUG-17 (strokeDashPattern), BUG-18/19 (strokeColor alias)
 // Run: node scripts/test-v2519.mjs
 import { executeCode } from "../server/code-executor.js";

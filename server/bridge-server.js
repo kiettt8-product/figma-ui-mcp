@@ -2,6 +2,10 @@
 // Supports long polling, multi-instance sessions, and connection resilience
 import http from "node:http";
 
+export const BRIDGE_SERVICE_ID = "io.github.kiettt8-product.figma-ui-mcp-bridge";
+export const BRIDGE_PROTOCOL_VERSION = 1;
+export const BRIDGE_VERSION = "2.5.27";
+
 export const CONFIG = {
   PORT: parseInt(process.env.FIGMA_MCP_PORT || "38451", 10),
   PORT_RANGE: 10,
@@ -17,7 +21,7 @@ export const CONFIG = {
 // Operation-specific timeouts
 const OP_TIMEOUTS = {
   screenshot: 90_000, scan_design: 90_000, export_image: 90_000,
-  export_svg: 60_000, get_design: 60_000, batch: 90_000,
+  export_svg: 180_000, get_design: 60_000, batch: 90_000,
 };
 
 // Per-session state for multi-instance support
@@ -255,7 +259,11 @@ export class BridgeServer {
     if (path === "/" && req.method === "GET") {
       res.writeHead(200);
       res.end(JSON.stringify({
-        server: "figma-ui-mcp", version: "2.5.27", port: this.#actualPort,
+        server: "figma-ui-mcp",
+        serviceId: BRIDGE_SERVICE_ID,
+        protocolVersion: BRIDGE_PROTOCOL_VERSION,
+        version: BRIDGE_VERSION,
+        port: this.#actualPort,
         pluginConnected: this.isPluginConnected(),
         sessions: this.getSessions(),
         queueLength: this.queueLength,
@@ -338,6 +346,9 @@ export class BridgeServer {
       var lp = this.lastPollAt;
       res.writeHead(200);
       res.end(JSON.stringify({
+        serviceId: BRIDGE_SERVICE_ID,
+        protocolVersion: BRIDGE_PROTOCOL_VERSION,
+        version: BRIDGE_VERSION,
         pluginConnected: this.isPluginConnected(),
         queueLength: this.queueLength,
         pendingCount: this.pendingCount,
@@ -362,48 +373,48 @@ export class BridgeServer {
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
-  async #killStaleBridges() {
+  async #inspectPrimaryPort() {
     var port = CONFIG.PORT;
     try {
-      var isZombie = await new Promise(function(resolve) {
+      var occupant = await new Promise(function(resolve) {
         var req = http.get({ hostname: "127.0.0.1", port: port, path: "/health", timeout: 800 }, function(res) {
           var data = "";
           res.on("data", function(c) { data += c; });
           res.on("end", function() {
-            try { var j = JSON.parse(data); resolve(j.pluginConnected === undefined); }
-            catch(e) { resolve(true); }
+            try { resolve(JSON.parse(data)); }
+            catch(e) { resolve({ unknown: true }); }
           });
         });
-        req.on("error", function() { resolve(false); });
-        req.on("timeout", function() { req.destroy(); resolve(false); });
+        req.on("error", function() { resolve(null); });
+        req.on("timeout", function() { req.destroy(); resolve(null); });
       });
-      if (!isZombie) return;   // someone else's healthy bridge — leave it alone
-      // Zombie detected — kill ALL PIDs holding the port (was: only first PID)
-      try {
-        var m = await import("node:child_process");
-        var pids = m.execSync("lsof -ti tcp:" + port + " 2>/dev/null", { encoding: "utf8" })
-          .trim().split(/\s+/).filter(function(p) { return p && parseInt(p, 10) !== process.pid; });
-        if (pids.length > 0) {
-          for (var i = 0; i < pids.length; i++) {
-            try { m.execSync("kill -9 " + pids[i] + " 2>/dev/null"); } catch(e) {}
-          }
-          process.stderr.write("[figma-ui-mcp] Killed " + pids.length + " zombie(s) on port " + port + ": " + pids.join(",") + "\n");
-          await new Promise(function(r) { setTimeout(r, 300); });
-        }
-      } catch(e) { /* ignore */ }
+      if (!occupant) return;
+      if (
+        occupant.serviceId !== BRIDGE_SERVICE_ID ||
+        occupant.protocolVersion !== BRIDGE_PROTOCOL_VERSION
+      ) {
+        process.stderr.write(
+          "[figma-ui-mcp] Port " + port +
+          " is owned by an unknown service; it will not be terminated.\n",
+        );
+      }
     } catch(e) { /* ignore */ }
   }
 
   start({ strictPort = false } = {}) {
     var self = this;
     return new Promise(async function(resolve, reject) {
-      await self.#killStaleBridges();
+      await self.#inspectPrimaryPort();
 
       var tryPort = function(port, attempt) {
         var maxAttempts = strictPort ? 1 : CONFIG.PORT_RANGE;
         if (attempt >= maxAttempts) {
-          process.stderr.write("[figma-ui-mcp] All ports " + CONFIG.PORT + "-" + (CONFIG.PORT + CONFIG.PORT_RANGE - 1) + " in use.\n");
-          resolve(self);
+          var rangeError = new Error(
+            "All ports " + CONFIG.PORT + "-" +
+            (CONFIG.PORT + CONFIG.PORT_RANGE - 1) + " are in use.",
+          );
+          rangeError.code = "EADDRINUSE";
+          reject(rangeError);
           return;
         }
         self.#server = http.createServer(function(req, res) { self.#route(req, res); });
@@ -417,8 +428,7 @@ export class BridgeServer {
             tryPort(port + 1, attempt + 1);
           } else {
             process.stderr.write("[figma-ui-mcp bridge] " + err.message + "\n");
-            if (strictPort) reject(err);
-            else resolve(self);
+            reject(err);
           }
         });
         self.#server.once("listening", function() {

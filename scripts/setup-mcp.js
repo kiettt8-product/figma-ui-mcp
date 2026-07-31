@@ -207,11 +207,17 @@ export function createServerConfig({
   nodePath = process.execPath,
   serverPath = path.join(REPO_ROOT, "server", "index.js"),
   includeType = false,
+  bundlePath = null,
 } = {}) {
   const config = {
     command: path.resolve(nodePath),
     args: [path.resolve(serverPath)],
   };
+  if (bundlePath) {
+    config.env = {
+      FIGMA_UI_MCP_DESIGN_SYSTEM_BUNDLE: path.resolve(bundlePath),
+    };
+  }
   if (includeType) return { type: "stdio", ...config };
   return config;
 }
@@ -284,6 +290,7 @@ export async function configureJsonClient(client, {
   dryRun = false,
   confirmReplace = async () => true,
   log = console.log,
+  bundlePath = null,
 } = {}) {
   const exists = existsSync(client.configPath);
   const rawText = exists ? readFileSync(client.configPath, "utf8") : "";
@@ -293,6 +300,7 @@ export async function configureJsonClient(client, {
     nodePath,
     serverPath,
     includeType: Boolean(client.includeType),
+    bundlePath,
   });
   if (data[client.rootKey] !== undefined && !isPlainObject(data[client.rootKey])) {
     throw new Error(
@@ -350,6 +358,7 @@ export async function configureCodexClient(client, {
   dryRun = false,
   confirmReplace = async () => true,
   log = console.log,
+  bundlePath = null,
 } = {}) {
   const exists = existsSync(client.configPath);
   const text = exists ? readFileSync(client.configPath, "utf8") : "";
@@ -358,6 +367,9 @@ export async function configureCodexClient(client, {
     `[mcp_servers.${SERVER_NAME}]`,
     `command = ${tomlString(path.resolve(nodePath))}`,
     `args = [${tomlString(path.resolve(serverPath))}]`,
+    ...(bundlePath
+      ? [`env = { FIGMA_UI_MCP_DESIGN_SYSTEM_BUNDLE = ${tomlString(path.resolve(bundlePath))} }`]
+      : []),
     "",
   ].join(eol);
   const section = findTomlSection(text);
@@ -396,6 +408,7 @@ function parseArgs(argv) {
     yes: false,
     dryRun: false,
     background: null,
+    bundlePath: null,
     help: false,
   };
 
@@ -405,6 +418,13 @@ function parseArgs(argv) {
     else if (arg === "--dry-run") result.dryRun = true;
     else if (arg === "--background") result.background = true;
     else if (arg === "--no-background") result.background = false;
+    else if (arg === "--bundle") {
+      const value = argv[++index];
+      if (!value) throw new Error("--bundle requires a directory.");
+      result.bundlePath = path.resolve(value);
+    } else if (arg.startsWith("--bundle=")) {
+      result.bundlePath = path.resolve(arg.slice("--bundle=".length));
+    }
     else if (arg === "--help" || arg === "-h") result.help = true;
     else if (arg === "--client" || arg === "-c") {
       const value = argv[++index];
@@ -456,6 +476,7 @@ Usage:
   npm run setup -- --client all --yes
   npm run setup -- --client vscode --dry-run
   npm run setup -- --client codex --background --yes
+  npm run setup -- --client codex --bundle /path/to/design-system-bundle --yes
 
 Clients:
   codex, claude-code, claude-desktop, cursor, vscode, windsurf
@@ -466,6 +487,7 @@ Options:
       --dry-run       Show planned changes without writing files
       --background    Install an always-on bridge that starts at login
       --no-background Do not install the login background bridge
+      --bundle <path> Configure a portable design-system bundle for every client
   -h, --help          Show this help
 `.trim());
 }
@@ -508,9 +530,12 @@ export async function runSetup({
     throw new Error(`MCP server entry point not found: ${serverPath}`);
   }
   const nodePath = executableOnPath("node", env, platform) || process.execPath;
+  if (options.bundlePath && !existsSync(path.join(options.bundlePath, "manifest.json"))) {
+    throw new Error(`Design-system manifest not found: ${options.bundlePath}`);
+  }
 
   const major = Number(process.versions.node.split(".")[0]);
-  if (major < 18) throw new Error("Node.js 18 or newer is required.");
+  if (major < 20) throw new Error("Node.js 20 or newer is required.");
 
   const clients = resolveClients({ home, platform, env });
   let selectedIds = expandClientIds(options.clientValues, clients);
@@ -529,6 +554,7 @@ export async function runSetup({
   console.log(`  Node:     ${nodePath}`);
   console.log(`  Server:   ${serverPath}`);
   console.log(`  Manifest: ${path.join(REPO_ROOT, "plugin", "manifest.json")}`);
+  if (options.bundlePath) console.log(`  Bundle:   ${options.bundlePath}`);
 
   const confirmReplace = async client => {
     if (options.yes) return true;
@@ -548,6 +574,7 @@ export async function runSetup({
         serverPath,
         dryRun: options.dryRun,
         confirmReplace,
+        bundlePath: options.bundlePath,
       });
       results.push({ client: client.id, ...result });
     } catch (error) {
