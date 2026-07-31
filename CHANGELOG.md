@@ -18,9 +18,16 @@ the upstream history remains available through Git.
 - Session-scoped design-system gate before Figma writes.
 - Product knowledge for the ZaloPay voucher journey, packaged separately from
   the public source repository.
+- Bundle-first icon resolution through semantic aliases.
+- Asset provenance metadata on imported Figma nodes: bundle ID, version, asset
+  ID and checksum.
+- Validator errors for hand-drawn icons and external-library icons when an
+  exact bundle asset exists.
 
 ### Changed
 
+- `figma.loadIcon()` now checks the configured design-system bundle before
+  using Ionicons, Fluent, Bootstrap, Phosphor, Tabler or Lucide.
 - Added bridge service identity and protocol checks.
 - Unknown services occupying the bridge port are no longer terminated.
 - Public npm and MCP Registry publishing is disabled until an approved package

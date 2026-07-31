@@ -125,6 +125,22 @@ function applyChildLayout(node, params) {
   }
 }
 
+function applyAssetProvenance(node, provenance) {
+  if (!provenance || !node || typeof node.setPluginData !== "function") return;
+  var safe = {
+    source: provenance.source || null,
+    reference: provenance.reference || null,
+    assetId: provenance.assetId || null,
+    assetPath: provenance.assetPath || null,
+    category: provenance.category || null,
+    sha256: provenance.sha256 || null,
+    bundleId: provenance.bundleId || null,
+    bundleVersion: provenance.bundleVersion || null,
+    library: provenance.library || null,
+  };
+  node.setPluginData("figmaUiMcpAsset", JSON.stringify(safe));
+}
+
 // When TEXT content is changed on a node inside a hug-axis auto-layout parent,
 // promote the text node's matching layoutSizing axis to HUG. Otherwise the
 // parent's hug request is silently ignored because the child's
@@ -485,6 +501,7 @@ handlers.create = async (params) => {
   // x/y set after appendChild — Figma resets position on reparent
   node.x = x;
   node.y = y;
+  applyAssetProvenance(node, params.assetProvenance);
 
   return nodeToInfo(node);
 };

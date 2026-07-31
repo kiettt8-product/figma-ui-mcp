@@ -55,6 +55,7 @@ try {
       recipes: "recipes",
       productCatalog: "product/catalog.json",
       semanticAssets: "assets/semantic-catalog.json",
+      assetAliases: "assets/aliases.json",
       checksums: "checksums.json",
     },
   });
@@ -85,6 +86,14 @@ try {
         status: "ready",
       },
     }],
+  });
+  writeJson("assets/aliases.json", {
+    schemaVersion: 1,
+    assets: [
+      { alias: "gift", assetId: "asset:1" },
+      { alias: "gift voucher", assetId: "asset:1" },
+      { alias: "icon.voucher.entry", assetId: "asset:1" },
+    ],
   });
   writeJson("checksums.json", {
     algorithm: "sha256",
@@ -143,6 +152,12 @@ try {
     typography: {
       title: { fontFamily: "Test Sans", fontWeight: "Bold", fontSize: 16, lineHeight: 24 },
       body: { fontFamily: "Test Sans", fontWeight: "Regular", fontSize: 14, lineHeight: 22 },
+    },
+    assetPolicy: {
+      requireBundleProvenanceForIcons: true,
+      allowFigmaComponentInstances: true,
+      externalFallbackSeverity: "warning",
+      missingProvenanceSeverity: "error",
     },
     policies: ["Use semantic typography.", "Validate before handoff."],
   });
@@ -219,6 +234,12 @@ try {
   const importedAsset = manager.readAsset("merchant.test");
   assert.equal(importedAsset.buffer.toString("utf8"), testSvg);
   assert.equal(importedAsset.asset.checksumVerified, true);
+  assert.equal(importedAsset.asset.bundleId, "test-design-system");
+  assert.equal(importedAsset.asset.bundleVersion, "1.0.0");
+  const importedIcon = manager.readIcon("gift");
+  assert.equal(importedIcon.asset.id, "asset:1");
+  assert.equal(manager.readIcon("icon.voucher.entry").asset.id, "asset:1");
+  assert.equal(manager.readIcon("not-in-bundle"), null);
 
   const strictResolverWithoutChecksum = new BundleAssetResolver({
     bundlePath: fixtureDirectory,
@@ -257,6 +278,26 @@ try {
   assert.equal(createPayload.type, "SVG");
   assert.equal(createPayload.width, 36);
   assert.match(createPayload.svg, /<svg/);
+  assert.equal(createPayload.assetProvenance.source, "bundle");
+  assert.equal(createPayload.assetProvenance.assetId, "merchant.test");
+  assert.equal(createPayload.assetProvenance.bundleVersion, "1.0.0");
+
+  createPayload = null;
+  const iconWrite = await executeCode(
+    'return await figma.loadIcon("gift", { size: 24, fill: "#001122" });',
+    bridge,
+    null,
+    {
+      loadBundleAsset: (reference, options) => manager.readAsset(reference, options),
+      loadBundleIcon: (reference, options) => manager.readIcon(reference, options),
+    },
+  );
+  assert.equal(iconWrite.success, true, iconWrite.error);
+  assert.equal(createPayload.type, "SVG");
+  assert.equal(createPayload.width, 24);
+  assert.equal(createPayload.fill, "#001122");
+  assert.equal(createPayload.assetProvenance.source, "bundle");
+  assert.equal(createPayload.assetProvenance.assetId, "asset:1");
   writeText("assets/svg/gift.svg", `${testSvg}\n<!-- tampered -->`);
   assert.throws(
     () => manager.readAsset("merchant.test"),
@@ -311,6 +352,51 @@ try {
   const validResult = manager.validate(validTree, "test-screen");
   assert.equal(validResult.ok, true, JSON.stringify(validResult.findings, null, 2));
   assert.equal(validResult.counts.error, 0);
+
+  const bundledIconTree = structuredClone(validTree);
+  bundledIconTree.children.push({
+    id: "1:5",
+    name: "Voucher Icon",
+    type: "VECTOR",
+    x: 16,
+    y: 130,
+    width: 24,
+    height: 24,
+    isIcon: true,
+    assetProvenance: {
+      source: "bundle",
+      reference: "gift",
+      assetId: "asset:1",
+      bundleId: "test-design-system",
+      bundleVersion: "1.0.0",
+    },
+  });
+  const bundledIconResult = manager.validate(bundledIconTree, "test-screen");
+  assert.equal(bundledIconResult.ok, true, JSON.stringify(bundledIconResult.findings, null, 2));
+
+  const missingProvenanceTree = structuredClone(bundledIconTree);
+  delete missingProvenanceTree.children.at(-1).assetProvenance;
+  const missingProvenanceResult = manager.validate(missingProvenanceTree, "test-screen");
+  assert.equal(missingProvenanceResult.ok, false);
+  assert.ok(
+    missingProvenanceResult.findings.some(
+      finding => finding.code === "asset-provenance-missing",
+    ),
+  );
+
+  const externalIconTree = structuredClone(bundledIconTree);
+  externalIconTree.children.at(-1).assetProvenance = {
+    source: "external-icon-library",
+    reference: "gift",
+    library: "ionicons",
+  };
+  const externalIconResult = manager.validate(externalIconTree, "test-screen");
+  assert.equal(externalIconResult.ok, false);
+  assert.ok(
+    externalIconResult.findings.some(
+      finding => finding.code === "external-icon-when-bundled",
+    ),
+  );
 
   const invalidTree = structuredClone(validTree);
   invalidTree.width = 390;

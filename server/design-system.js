@@ -356,6 +356,95 @@ function validateColors(rows, variables, findings) {
   }
 }
 
+function validateAssetProvenance(rows, semantic, assetResolver, findings) {
+  const policy = semantic?.assetPolicy || {};
+  if (!policy.requireBundleProvenanceForIcons || !assetResolver) return;
+
+  for (const row of rows.filter(entry => entry.node.isIcon)) {
+    const hasIconAncestor = (() => {
+      let cursor = row.parent;
+      while (cursor) {
+        if (cursor.node.isIcon || cursor.node.assetProvenance?.source === "bundle") return true;
+        cursor = cursor.parent;
+      }
+      return false;
+    })();
+    if (hasIconAncestor) continue;
+
+    const node = row.node;
+    const provenance = node.assetProvenance || null;
+    if (
+      policy.allowFigmaComponentInstances !== false &&
+      node.type === "INSTANCE" &&
+      (node.componentId || node.componentName)
+    ) {
+      continue;
+    }
+
+    if (provenance?.source === "bundle") {
+      const reference = provenance.assetId || provenance.reference;
+      let resolved = null;
+      try {
+        resolved = assetResolver.resolveExact(reference);
+      } catch {
+        resolved = null;
+      }
+      if (!resolved) {
+        findings.push(makeFinding(
+          "error",
+          "bundle-asset-unresolved",
+          `${node.name} claims bundle provenance but its asset cannot be resolved.`,
+          row,
+          "A valid bundle asset ID",
+          reference || null,
+        ));
+      }
+      continue;
+    }
+
+    if (provenance?.source === "external-icon-library") {
+      let bundledMatch = null;
+      try {
+        bundledMatch = assetResolver.resolveExact(
+          provenance.reference,
+          { categories: ["icon", "icons", "utility-icon"] },
+        );
+      } catch {
+        bundledMatch = null;
+      }
+      if (bundledMatch) {
+        findings.push(makeFinding(
+          "error",
+          "external-icon-when-bundled",
+          `${node.name} uses ${provenance.library || "an external icon library"} even though the bundle provides ${bundledMatch.name}.`,
+          row,
+          bundledMatch.id,
+          provenance.reference || node.name,
+        ));
+      } else {
+        findings.push(makeFinding(
+          policy.externalFallbackSeverity || "warning",
+          "external-icon-fallback",
+          `${node.name} uses a reviewed external fallback because no exact bundle alias was found.`,
+          row,
+          "A semantic bundle icon alias",
+          provenance.reference || node.name,
+        ));
+      }
+      continue;
+    }
+
+    findings.push(makeFinding(
+      policy.missingProvenanceSeverity || "error",
+      "asset-provenance-missing",
+      `${node.name} looks like an icon but has no design-system asset provenance.`,
+      row,
+      "Bundle asset metadata or a Figma component instance",
+      null,
+    ));
+  }
+}
+
 function descendantsOf(containerRow, rows) {
   return rows.filter(row => {
     let cursor = row.parent;
@@ -796,6 +885,14 @@ export class DesignSystemManager {
       }
     }
 
+    if (this.semantic.assetPolicy?.requireBundleProvenanceForIcons) {
+      lines.push("", "## Asset provenance");
+      lines.push("- Use figma.loadBundleAsset() or bundle-first figma.loadIcon() for icons.");
+      lines.push("- Do not redraw an icon with VECTOR, LINE, ELLIPSE, or placeholder geometry.");
+      lines.push("- External icon libraries are fallback-only when no exact bundle alias exists.");
+      lines.push("- figma_validate treats missing bundle provenance as an error.");
+    }
+
     if (recipe) {
       lines.push("", `## Recipe: ${recipe.name || recipe.id}`);
       for (const rule of recipe.instructions || []) lines.push(`- ${rule}`);
@@ -836,7 +933,24 @@ export class DesignSystemManager {
     if (!this.loaded || !this.assetResolver) {
       throw new Error("No design-system bundle is configured.");
     }
-    return this.assetResolver.read(reference, options);
+    const resolved = this.assetResolver.read(reference, options);
+    return {
+      ...resolved,
+      asset: {
+        ...resolved.asset,
+        bundleId: this.manifest.id || null,
+        bundleVersion: this.manifest.version || null,
+      },
+    };
+  }
+
+  readIcon(reference, options = {}) {
+    if (!this.loaded || !this.assetResolver) return null;
+    const asset = this.assetResolver.resolveExact(reference, {
+      categories: ["icon", "icons", "utility-icon"],
+    });
+    if (!asset) return null;
+    return this.readAsset(asset.id, options);
   }
 
   validate(tree, recipeId) {
@@ -860,6 +974,7 @@ export class DesignSystemManager {
     const findings = [];
     validateTypography(rows, this.semantic, findings);
     validateColors(rows, this.variables, findings);
+    validateAssetProvenance(rows, this.semantic, this.assetResolver, findings);
     validateRecipe(tree, rows, recipe, findings);
     const counts = findings.reduce(
       (result, finding) => {

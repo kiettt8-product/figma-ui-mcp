@@ -101,6 +101,12 @@ function extractDesignTree(node, depth, maxDepth, detailLevel, filterInvisible) 
     width: "width"  in node ? Math.round(node.width)   : undefined,
     height:"height" in node ? Math.round(node.height)  : undefined,
   };
+  try {
+    if (typeof node.getPluginData === "function") {
+      var rawAssetProvenance = node.getPluginData("figmaUiMcpAsset");
+      if (rawAssetProvenance) info.assetProvenance = JSON.parse(rawAssetProvenance);
+    }
+  } catch(e) {}
 
   // Minimal: only basic info + childCount, skip all style properties
   if (isMinimal) {

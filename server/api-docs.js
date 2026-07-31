@@ -62,7 +62,9 @@ await figma.ensure_library();
 
 **Non-negotiable rules:**
 - ❌ NEVER hardcode hex in \`fill\`/\`stroke\` — always use \`applyVariable\` after create
-- ❌ NEVER use emoji as icons — use \`figma.loadIcon(name, {size, fill})\` (BUG-12: emoji misaligns & color-shifts in Figma)
+- ❌ NEVER use emoji or redraw icons with primitive VECTOR geometry.
+- ✅ With a configured bundle, use \`figma.loadBundleAsset(assetId)\` or bundle-first \`figma.loadIcon(alias)\`.
+- ✅ External icon libraries are fallback-only when no exact bundle alias exists.
 - ❌ NEVER set icon size >= container size — icon = container × 0.5
 - ❌ NEVER draw background image AFTER other elements — background FIRST, content on top
 - ❌ NEVER put overlapping rectangles inside auto-layout (progress bars) — use non-layout wrapper
@@ -188,7 +190,10 @@ NEVER same color for container fill and inner text — text will be invisible.
 - Use \`primaryAxisSizingMode: "AUTO"\` when possible
 
 ### Rule 9 — NO EMOJI AS ICONS (NON-NEGOTIABLE)
-NEVER use emoji (🔔 📋 👤) as icons. Always use \`figma.loadIcon()\` or \`figma.loadIconIn()\`.
+NEVER use emoji (🔔 📋 👤) or hand-drawn placeholder geometry as icons. With a
+configured bundle, resolve an asset ID first. \`figma.loadIcon()\` and
+\`figma.loadIconIn()\` automatically prefer an exact bundle alias before trying
+an external library.
 
 \`\`\`js
 // WRONG
@@ -1472,7 +1477,8 @@ replace a required bundled merchant mark with a placeholder.
 
 ## figma.loadIcon(name, opts)
 
-Fetch SVG icon with 7-library auto-fallback (filled-first, iOS style preferred):
+Resolve an exact semantic alias from the configured bundle first. Only when the
+bundle has no exact alias, fetch an SVG from the 7-library external fallback:
 
 \`\`\`js
 await figma.loadIcon("notifications", { parentId: header.id, x: 16, y: 16, size: 22, fill: "#FFFFFF" });

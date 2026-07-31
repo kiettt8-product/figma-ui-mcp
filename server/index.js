@@ -224,6 +224,7 @@ server.setRequestHandler(CallToolRequestSchema, async ({ params: { name, argumen
       writeSessionId,
       {
         loadBundleAsset: (reference, options) => designSystem.readAsset(reference, options),
+        loadBundleIcon: (reference, options) => designSystem.readIcon(reference, options),
       },
     );
     const parts = [];

@@ -237,8 +237,9 @@ export const TOOLS = [
       "Search the configured portable bundle for checksum-addressable semantic assets, " +
       "component SVGs, icons, merchant marks, and raster images. Prefer an exact semantic " +
       "asset ID from design_system_plan. Import a result inside figma_write with " +
-      "figma.loadBundleAsset(asset.id, opts); never draw a placeholder when a required " +
-      "bundled asset exists.",
+      "figma.loadBundleAsset(asset.id, opts); never draw a placeholder or primitive VECTOR " +
+      "replacement when a required bundled asset exists. Imported nodes retain provenance " +
+      "metadata that figma_validate enforces.",
     inputSchema: {
       type: "object",
       properties: {

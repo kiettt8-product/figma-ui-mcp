@@ -197,6 +197,10 @@ AI client sẽ tự gọi `design_system_plan`, dùng context đã chọn và l�
 `figma.loadBundleAsset(...)`. Asset được giới hạn trong thư mục bundle và kiểm
 tra SHA-256 trước khi import vào Figma.
 
+`figma.loadIcon(...)` cũng ưu tiên semantic alias trong bundle. Mỗi asset được
+gắn bundle ID, version và checksum vào node; `figma_validate` báo lỗi nếu icon
+được tự vẽ hoặc dùng thư viện ngoài trong khi bundle đã có icon tương ứng.
+
 Nếu thiếu font bắt buộc, MCP sẽ dừng thao tác ghi thay vì âm thầm thay font và
 làm lệch layout.
 

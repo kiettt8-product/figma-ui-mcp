@@ -146,7 +146,7 @@ function normalizeArcData(arcData) {
 }
 
 // ─── Build figma proxy with helper methods ────────────────────────────────────
-function buildFigmaProxy(bridge, { loadBundleAsset } = {}) {
+function buildFigmaProxy(bridge, { loadBundleAsset, loadBundleIcon } = {}) {
   const proxy = { notify: (msg) => Promise.resolve(msg) };
   for (const op of ALL_OPS) {
     proxy[op] = (params = {}) => bridge.sendOperation(op, params);
@@ -218,19 +218,18 @@ function buildFigmaProxy(bridge, { loadBundleAsset } = {}) {
     });
   };
 
-  // ── figma.loadBundleAsset(reference, opts) ──────────────────────────────
-  // Imports a checksum-verified SVG or raster asset from the configured
-  // portable design-system bundle. The VM never receives filesystem access.
-  proxy.loadBundleAsset = async (reference, opts = {}) => {
-    if (!loadBundleAsset) {
-      throw new Error(
-        "No design-system bundle is configured. Run design_system_status first.",
-      );
-    }
-    const resolved = await loadBundleAsset(reference, {
-      maxBytes: opts.maxBytes || 5_000_000,
-    });
+  const createResolvedBundleAsset = async (resolved, reference, opts = {}) => {
     const asset = resolved.asset;
+    const provenance = {
+      source: "bundle",
+      reference: String(reference),
+      assetId: asset.id,
+      assetPath: asset.assetPath,
+      category: asset.category,
+      sha256: asset.sha256,
+      bundleId: asset.bundleId || null,
+      bundleVersion: asset.bundleVersion || null,
+    };
     if (asset.mimeType === "image/svg+xml") {
       return bridge.sendOperation("create", {
         type: "SVG",
@@ -241,6 +240,8 @@ function buildFigmaProxy(bridge, { loadBundleAsset } = {}) {
         width: opts.width || asset.width || 24,
         height: opts.height || asset.height || 24,
         svg: resolved.buffer.toString("utf8"),
+        fill: opts.fill,
+        assetProvenance: provenance,
       });
     }
     if (!asset.mimeType.startsWith("image/")) {
@@ -257,7 +258,23 @@ function buildFigmaProxy(bridge, { loadBundleAsset } = {}) {
       imageData: resolved.buffer.toString("base64"),
       scaleMode: opts.scaleMode || "FIT",
       cornerRadius: opts.cornerRadius,
+      assetProvenance: provenance,
     });
+  };
+
+  // ── figma.loadBundleAsset(reference, opts) ──────────────────────────────
+  // Imports a checksum-verified SVG or raster asset from the configured
+  // portable design-system bundle. The VM never receives filesystem access.
+  proxy.loadBundleAsset = async (reference, opts = {}) => {
+    if (!loadBundleAsset) {
+      throw new Error(
+        "No design-system bundle is configured. Run design_system_status first.",
+      );
+    }
+    const resolved = await loadBundleAsset(reference, {
+      maxBytes: opts.maxBytes || 5_000_000,
+    });
+    return createResolvedBundleAsset(resolved, reference, opts);
   };
 
   // ── figma.loadIcon(name, opts) ──────────────────────────────────────────
@@ -267,6 +284,20 @@ function buildFigmaProxy(bridge, { loadBundleAsset } = {}) {
   proxy.loadIcon = async (iconName, opts = {}) => {
     const size = opts.size || 24;
     const fill = opts.fill || "#1E3150";
+    if (loadBundleIcon && opts.source !== "external") {
+      const resolved = await loadBundleIcon(iconName, {
+        maxBytes: opts.maxBytes || 1_000_000,
+      });
+      if (resolved) {
+        return createResolvedBundleAsset(resolved, iconName, {
+          ...opts,
+          width: size,
+          height: size,
+          fill: opts.fill,
+          name: opts.name || resolved.asset.name || `icon/${iconName}`,
+        });
+      }
+    }
     let svg = null;
     let usedLib = null;
 
@@ -331,6 +362,11 @@ function buildFigmaProxy(bridge, { loadBundleAsset } = {}) {
       height: size,
       svg,
       fill,
+      assetProvenance: {
+        source: "external-icon-library",
+        reference: String(iconName),
+        library: usedLib,
+      },
     });
   };
 

@@ -125,7 +125,9 @@ export class BundleAssetResolver {
       const target = alias.assetId || alias.assetPath || alias.target;
       if (!target) continue;
       if (!aliasesByTarget.has(target)) aliasesByTarget.set(target, []);
-      aliasesByTarget.get(target).push(alias.alias || alias.name || alias.id);
+      aliasesByTarget.get(target).push(
+        ...[alias.alias, alias.name, alias.id].filter(Boolean),
+      );
     }
 
     this.assets = [
@@ -164,16 +166,49 @@ export class BundleAssetResolver {
       }));
   }
 
+  findExact(reference, { source = null, categories = null } = {}) {
+    const normalizedReference = normalizeSearchText(reference);
+    if (!normalizedReference) return [];
+    const acceptedCategories = new Set(
+      (Array.isArray(categories) ? categories : categories ? [categories] : [])
+        .map(normalizeSearchText),
+    );
+    return this.assets
+      .filter(asset => asset.assetStatus === "exported")
+      .filter(asset => !source || asset.source === source)
+      .filter(asset =>
+        !acceptedCategories.size ||
+        acceptedCategories.has(normalizeSearchText(asset.category)),
+      )
+      .filter(asset => [
+        asset.id,
+        asset.key,
+        asset.assetPath,
+        asset.name,
+        ...(asset.aliases || []),
+      ].some(value => normalizeSearchText(value) === normalizedReference))
+      .sort((left, right) =>
+        Number(right.source === "semantic") - Number(left.source === "semantic") ||
+        String(left.id).localeCompare(String(right.id)),
+      );
+  }
+
+  resolveExact(reference, options = {}) {
+    const exact = this.findExact(reference, options);
+    if (!exact.length) return null;
+    const uniqueTargets = new Set(exact.map(asset => asset.assetPath));
+    if (uniqueTargets.size > 1) {
+      throw new Error(
+        `Bundle asset reference is ambiguous: ${reference}. Use an exact id or assetPath.`,
+      );
+    }
+    return exact[0];
+  }
+
   resolve(reference) {
     const raw = String(reference || "").trim();
     if (!raw) throw new Error("Asset reference is required.");
-    const exact = this.assets.filter(asset =>
-      asset.id === raw ||
-      asset.key === raw ||
-      asset.assetPath === raw ||
-      asset.name === raw ||
-      asset.aliases.includes(raw),
-    );
+    const exact = this.findExact(raw);
     const candidates = exact.length ? exact : this.search(raw, { limit: 2 });
     if (!candidates.length) throw new Error(`Bundle asset not found: ${raw}`);
     if (!exact.length && candidates.length > 1 && candidates[0].score === candidates[1].score) {

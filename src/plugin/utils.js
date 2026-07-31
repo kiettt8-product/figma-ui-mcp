@@ -184,5 +184,11 @@ function nodeToInfo(node) {
   if ("y" in node)      info.y = Math.round(node.y);
   if ("width" in node)  info.width  = Math.round(node.width);
   if ("height" in node) info.height = Math.round(node.height);
+  try {
+    if (typeof node.getPluginData === "function") {
+      var rawAssetProvenance = node.getPluginData("figmaUiMcpAsset");
+      if (rawAssetProvenance) info.assetProvenance = JSON.parse(rawAssetProvenance);
+    }
+  } catch(e) {}
   return info;
 }

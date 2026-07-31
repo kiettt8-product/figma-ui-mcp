@@ -245,7 +245,8 @@ export function buildProductPlan({
     preflight: [
       "Call design_system_status and stop if required fonts are unavailable.",
       "Read design_system_context for every selected recipe before writing.",
-      "Resolve bundled icons and merchant marks with design_system_assets; do not draw placeholders.",
+      "Resolve bundled icons and merchant marks with design_system_assets; do not redraw them with primitive geometry.",
+      "Use the exact asset IDs returned by the plan. External icon libraries are fallback-only when no bundle alias exists.",
       "Preserve existing canvas content and place generated groups in unused space.",
     ],
     generationOrder: screens.length
